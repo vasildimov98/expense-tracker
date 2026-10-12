@@ -1,10 +1,11 @@
 from datetime import date
+from math import isfinite
 
 options = {
     1: "Add Expense",
     2: "List Expenses",
     3: "Delete Expense",
-    4: "Show Balance",
+    4: "Show Summary",
     5: "Exit"
 }
 
@@ -20,8 +21,12 @@ def ask_amount():
             amount = float(input("Amount: "))
         except ValueError:
             print("Error: amount must be a number. Try Again :)")
-        else: 
+        else:
+            if not isfinite(amount) or amount <= 0:
+                print("Amount should be a positive valid number")
+                continue
             return amount
+            
 
 def ask_index(expenses_len):
     while True:
@@ -92,8 +97,33 @@ def delete_expense(expenses: list):
     print(f"Successfully deleted {expense['category']}")
     print()
 
-def show_coming_soon_label():
-    print("coming soon")
+def show_summary(expenses):
+    if len(expenses) == 0:
+        print("Nothing to show yet")
+        return
+    
+    total = 0 
+    total_by_category = {} 
+    for expense in expenses:
+        curr_amount = expense["amount"]
+            
+        total += curr_amount
+
+        category = expense["category"]
+        total_by_category[category] = total_by_category.get(category, 0) + curr_amount
+
+    print(f"Total expenses: {total:.2f}")
+
+    for category, amount in total_by_category.items():
+        print(f"  {category}: {amount:.2f}")
+
+    # REVIEW: max() fixes the "starts at 0" problem and the empty-list handling above is good.
+    # (1) Same nested-quote problem as before: ex["amount"] inside f"..." is a SyntaxError on Python < 3.12.
+    #     I checked with /usr/bin/python3 (3.9.6): the whole program fails to start.
+    # (2) The [...] list isn't needed; max() accepts a generator directly.
+    # (3) max() also has a `key=` argument that returns the whole expense dict instead of only the number,
+    #     so you could show which category/description it was. Look it up if you want that.
+    print(f"Largest expense: {max([ex['amount'] for ex in expenses]):.2f}")
     
 def main():
     expenses = []
@@ -107,7 +137,7 @@ def main():
         elif choice == "3": # delete
             delete_expense(expenses)
         elif choice == "4": # show
-            show_coming_soon_label()
+            show_summary(expenses)
         elif choice == "5": # exit
             print("Have a nice day! Goodbye :)") 
             break
