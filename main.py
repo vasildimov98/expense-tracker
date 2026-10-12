@@ -23,6 +23,15 @@ def ask_amount():
         else: 
             return amount
 
+def ask_index(expenses_len):
+    while True:
+        try:
+            index = int(input(f"Which expense do you want me to delete: valid choices [1:{expenses_len}]: "))
+        except ValueError:
+            print("Error: index must be a valid number. Try Again :)")
+        else: 
+            return index
+
 def ask_category():
     while True:
         category = input("Category: ").strip()
@@ -47,7 +56,7 @@ def list_expenses(expenses: list):
         print("No expenses added yet. Spend some money and come back :P")
         print()
         return
-    
+
     for number, item in enumerate(expenses, start = 1):
         description = "Not Provided"
         if item["description"]:
@@ -57,9 +66,35 @@ def list_expenses(expenses: list):
 
     print()
 
-def show_coming_soon_label():  
-    print("coming soon")
+def ask_expense_index(expenses_len: int): 
+    while True:
+        index = ask_index(expenses_len)
 
+        if index < 1 or index > expenses_len:
+            print(f"Valid digits are [1:{expenses_len}]")
+            continue
+
+        return index - 1
+
+
+def delete_expense(expenses: list):  
+    expenses_len = len(expenses)
+
+    if expenses_len == 0:
+        print("Nothing to delete here :O")
+        return
+    
+    list_expenses(expenses)
+
+    index = ask_expense_index(expenses_len)
+
+    expense = expenses.pop(index)
+    print(f"Successfully deleted {expense['category']}")
+    print()
+
+def show_coming_soon_label():
+    print("coming soon")
+    
 def main():
     expenses = []
     while True:
@@ -70,7 +105,7 @@ def main():
         elif choice == "2": # list
             list_expenses(expenses)
         elif choice == "3": # delete
-            show_coming_soon_label()
+            delete_expense(expenses)
         elif choice == "4": # show
             show_coming_soon_label()
         elif choice == "5": # exit
