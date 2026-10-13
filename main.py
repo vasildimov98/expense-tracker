@@ -1,5 +1,7 @@
 from datetime import date
 from math import isfinite
+import json
+import os
 
 options = {
     1: "Add Expense",
@@ -8,6 +10,8 @@ options = {
     4: "Show Summary",
     5: "Exit"
 }
+
+expenses_file_name = "expenses.json"
 
 def show_menu():
     print(f"Make your choice: {', '.join(str(key) for key in options)}")
@@ -117,28 +121,49 @@ def show_summary(expenses):
     for category, amount in total_by_category.items():
         print(f"  {category}: {amount:.2f}")
 
-    # REVIEW: max() fixes the "starts at 0" problem and the empty-list handling above is good.
-    # (1) Same nested-quote problem as before: ex["amount"] inside f"..." is a SyntaxError on Python < 3.12.
-    #     I checked with /usr/bin/python3 (3.9.6): the whole program fails to start.
-    # (2) The [...] list isn't needed; max() accepts a generator directly.
-    # (3) max() also has a `key=` argument that returns the whole expense dict instead of only the number,
-    #     so you could show which category/description it was. Look it up if you want that.
     print(f"Largest expense: {max([ex['amount'] for ex in expenses]):.2f}")
-    
+
+def save_expenses(expenses: list, filename: str):
+    with open(filename, "w") as f:
+        json.dump(expenses, f, indent = 4)
+
+def load_expenses(filename: str):
+    try:
+        with open(filename, "r") as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            raise ValueError("expected a list of expenses")
+        return data
+    except FileNotFoundError:
+        # First run: there is nothing saved yet, which is normal, not an error.
+        return []
+    except ValueError:
+        # json.JSONDecodeError is a subclass of ValueError, so this catches both unreadable JSON
+        # and the wrong-shape case raised above. Keep the broken file as a backup instead of
+        # letting the next save silently overwrite it.
+        backup = filename + ".bak"
+        os.replace(filename, backup)
+        print(f"Could not read {filename}. Saved a copy as {backup} and starting with an empty list.")
+        return []
+
+
 def main():
-    expenses = []
+    expenses = load_expenses(expenses_file_name)
     while True:
         show_menu()
         choice = input("Choice: ").strip()
         if choice == "1": # add 
             add_expense(expenses)
+            save_expenses(expenses, expenses_file_name)
         elif choice == "2": # list
             list_expenses(expenses)
         elif choice == "3": # delete
             delete_expense(expenses)
+            save_expenses(expenses, expenses_file_name)
         elif choice == "4": # show
             show_summary(expenses)
         elif choice == "5": # exit
+            save_expenses(expenses, expenses_file_name)
             print("Have a nice day! Goodbye :)") 
             break
         else:
