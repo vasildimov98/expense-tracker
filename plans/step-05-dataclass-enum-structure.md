@@ -109,9 +109,11 @@ Look up: `enum.Enum` (and `.value` vs `.name`).
 
 **Acceptance criteria**
 - [ ] `Category` lives in `models/category.py` and has at least: food, transport, entertainment, bills, other.
-- [ ] No category is written as a bare string anywhere else in the code.
-- [ ] The user picks a category by choosing from a numbered list, not by typing free text.
+- [ ] `from app.models import Category` works in a Python shell (so `models/__init__.py` only re-exports what exists).
 - [ ] You can turn a stored string back into a `Category`, and a `Category` into a string for the JSON file.
+- [ ] Tried on its own in a shell or throwaway script; the old `main.py` is not touched.
+
+*Using `Category` in the real code comes later: Story 3 (the `Expense.category` field), Story 6 (the numbered-list prompt) and the Story 7 final check.*
 
 ### Story 3: `Expense` dataclass
 **As a** developer, **I want** an `Expense` type, **so that** I stop reading fields with `item["amount"]`.
@@ -157,6 +159,7 @@ Look up: methods vs functions, `self`, keeping a dispatch table (`dict` of choic
 - [ ] `ExpenseCli(service)` has `run()` with the menu loop.
 - [ ] Every `input()` and `print()` lives in `cli/`. Prompts that only ask-and-validate are in `prompts.py`.
 - [ ] The five menu options (add, list, delete, summary, exit) work as in v1.
+- [ ] The user picks a category by choosing from a numbered list built from `Category`, not by typing free text.
 - [ ] The CLI catches your custom exception and shows a friendly message; it does not crash.
 - [ ] Exit leaves no data unsaved.
 
@@ -168,6 +171,7 @@ Look up: methods vs functions, `self`, keeping a dispatch table (`dict` of choic
 - [ ] `main.py` has no business logic and no `input()` / `print()` of its own.
 - [ ] `python main.py` starts the app and everything works end to end.
 - [ ] The old top-level functions and the `options` dict are gone from `main.py`.
+- [ ] No category is written as a bare string anywhere in the code, except inside `Category` itself and the JSON conversion.
 - [ ] `expenses.json` and `expenses.json.bak` are still git-ignored.
 - [ ] `README.md` has a 3-line "how to run" and a one-line description of each folder.
 
