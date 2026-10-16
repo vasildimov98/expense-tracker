@@ -221,5 +221,5 @@ __marimo__/
 
 # Expenses file
 expenses.json
-expenses.json.bak
+expenses.bak
 scratch.py
