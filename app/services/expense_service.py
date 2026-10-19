@@ -15,9 +15,9 @@ class Summary:
 @dataclass
 class ExpenseService:
     expense_storage: JsonExpenseStorage
-    _expenses: list[Expense] = field(init=False)
+    _expenses: list[Expense] = field(init=False, default_factory=list)
 
-    def __post_init__(self):
+    def load_expenses(self):
         self._expenses = self.expense_storage.load()
 
     def add_expense(self, category: Category, amount: float, description: str):
