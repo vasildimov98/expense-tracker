@@ -1,1 +1,1 @@
-from .expense_service import ExpenseService
+from .expense_service import ExpenseService, ExpenseNotFoundError, Summary
