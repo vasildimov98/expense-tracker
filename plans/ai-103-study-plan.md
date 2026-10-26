@@ -39,7 +39,20 @@ Exam: 120 minutes, pass mark 700, proctored. Retake after 24 hours. Free yearly 
 
 ## Progress
 
-Current Day: **Day 2** (Day 1 done 2026-10-20). Azure access pending: labs are queued in `study/lab-queue.md`. Mark `[x]` done, `[~]` reading done but a lab is queued.
+Current Day: **Day 2** (Day 1 done 2026-10-20). P1 m1-m6 notes done, P1 quiz passed 8.25/10 on 2026-10-22 (second attempt). P2 m1-m9 notes done (`study/notes-p2.md`), P2 quiz (exam-style) passed 9.5/10 on 2026-10-26 (only miss: order of the workflow escalation steps). Azure access pending: labs are queued in `study/lab-queue.md` (see the plan change below). Mark `[x]` done, `[~]` reading done but a lab is queued.
+
+### Plan change, 2026-10-23: theory first, labs only if the exam needs them
+
+Azure access may take a long time, so the Azure gate (rule 6) no longer blocks progress:
+
+1. **Theory pass first.** Do all the reading, notes and "quiz me" checkpoints. Skip every "Do (Azure)" task and module Exercise unit for now (they stay in `study/lab-queue.md`).
+2. **Learn the exam content.** Use the study guide, the quizzes, the Practice Assessment and the exam sandbox to see how theoretical or practical the questions are. The Learn exam page says the exam "may have interactive components".
+   - **Decided 2026-10-23:** before booking the real exam, do the free **Practice Assessment** (AI Skills Navigator, sign-in needed) and the **exam sandbox** (https://aka.ms/examdemo). Log scores per domain in `study/scores.md` and note which question types look practical.
+3. **Take the exam and check the score** (book once the Day 49 rule is met). Use the score report per domain.
+4. **If it did not go well:** check Azure access. With it, redo the material hands-on and retake. Without it, create a personal Microsoft account (free tier), redo the material hands-on, retake.
+5. **If the exam turns out to be mostly theory:** drop the labs for good, get the certificate, then practise by adding AI features to the expense tracker.
+
+Note: Day 49's rule (book only if both practice scores are 80% or higher) still applies as the safer way to decide when to book. The real exam costs money and retakes wait (24 hours after the first attempt, longer after that).
 
 ---
 
