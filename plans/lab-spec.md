@@ -92,6 +92,26 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 - *Consequence:* the guardrails are D6 (TPM cap), D2 (one group to delete) and manual checks on the Monitor tab.
 - *Change when:* moving to a subscription type that supports Cost Management.
 
+### Lab 2: Model selection and routing
+
+**D15. Compare `gpt-4.1-mini` against `gpt-4o`**
+- *Why:* `gpt-4.1` was the first choice but this subscription has 0 quota for it (`InsufficientQuota`). `gpt-4o` is a larger non-reasoning model with quota, so size is the main variable.
+- *Alternative:* reasoning models (`o4-mini`, `gpt-5-mini`): hidden reasoning tokens muddy a first comparison.
+- *Change when:* `gpt-4.1` quota is granted, or Lab 4 needs multi-step reasoning.
+
+**D16. Decide with a labelled set, not by feel.** Measured: accuracy, latency, tokens, cost per model. Result: mini 11/12 vs gpt-4o 12/12; `gpt-4o` costs about 7.6x more per expense. With a one-line instruction ("if several parts, choose the primary purpose") mini reached 12/12 too, at the cost of about +36% tokens (501 -> 705 per 12 items).
+- *Caveat:* the prompt was tuned on the same 12 items, so 12/12 is optimistic. Use held-out items before trusting it.
+
+**D17. Include ambiguous rows.** Clear rows make every model look perfect; only the ambiguous row separated the models. Wrong answers on ambiguous input are also low-stakes because the user can correct the category.
+
+**D18. Route by task: `categorize` -> mini, `advise` -> gpt-4o.** Cost follows volume. Static task routing is the right tool when the task is known in advance; the alternatives are a per-agent model (Lab 4), the Foundry `model-router` deployment (dynamic, for unpredictable prompts) and an API Management gateway (fallback, load balancing, Lab 6).
+
+**D19. Router config from env vars.** Swapping a model is a config change, not a code change.
+
+**D20. Second deployment is `Standard` (regional), capacity 10.** Quota is per model AND per deployment type: `Standard.gpt-4o` had 50, GlobalStandard had none. Regional costs about 21% more than global but keeps processing in Sweden.
+
+**D21. Prices from the Azure Retail Prices API** (`https://prices.azure.com/api/retail/prices`, no login). The Foundry compare page's "Estimated cost" is a benchmark index, not dollars. Prices used: mini global $0.40 in / $1.60 out per 1M; gpt-4o regional $3.025 / $12.10.
+
 ### Lab 3: Grounding with Azure AI Search
 
 **D22. Azure AI Search Free tier.** $0 while idle, supports vector search; limits 50 MB / 3 indexes, one free service per subscription. Kept after the lab because Lab 4 reuses the index (Free services may be removed after long inactivity; the build script recreates everything). *Alternative:* Basic (~$70+/month, hourly billing). *Change when:* more data, replicas or SLA are needed.
@@ -116,6 +136,42 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 
 **D32. Separate embeddings client on the resource-level endpoint.** The project-scoped endpoint behind `get_openai_client()` returns an empty `404` for `/embeddings`; `get_embeddings_client()` uses `<resource>/openai/v1/` with a keyless token provider, built from the same `FOUNDRY_PROJECT_ENDPOINT`.
 
+### Lab 4: Advisor agent (tools, knowledge, memory)
+
+**D33. Prompt agent in Foundry Agent Service (`agents.create_version`).** Model, instructions and tools are stored and versioned server-side; each `create_version` call with the same name makes the next version. *Alternative:* a plain `responses.create(tools=...)` script, or the client-side Microsoft Agent Framework.
+
+**D34. Agent model = the `advise` route (`gpt-4o`).** Tool selection and synthesis are the reasoning-heavy part; volume is low. *Change when:* an evaluation shows mini is enough (Lab 7).
+
+**D35. Totals through a function tool over existing app code (`ExpenseService.compute_summary`).** The model decides *when* to call, never *how to add*. Result: Food 152.80 (the figure Lab 3 got wrong as 140.3). *Alternative:* larger top-k, or LLM arithmetic.
+
+**D36. Knowledge through a function tool that reuses the Lab 3 hybrid retrieval.** We embed queries client-side and the index has no vectorizer. *Alternative:* the built-in Azure AI Search tool (project connection, roles; not tested).
+
+**D37. Read-only tools only.** A tool that does not exist cannot be abused through prompt injection; writes would need human approval (Lab 8).
+
+**D38. Validate model-supplied arguments, return tool errors to the model as data.** `Category(category)` guards the filter string.
+
+**D39. `MAX_TOOL_ROUNDS = 5`.** Bounds a runaway tool loop, which costs tokens.
+
+**D40. Short-term state with `previous_response_id`, long-term with a memory store.** Verified: the budget told in conversation 1 was recalled in a new conversation 2.
+
+**D41. Memory scope per user (`user-vd91`).** A real app uses the signed-in user (`{{$userId}}`).
+
+**D42. Memory is preview and stores personal facts.** Decide retention (TTL, default never expires) and deletion (`delete_scope`) before production.
+
+### Lessons from the Lab 1 run (so we don't repeat them)
+- The CLI `--name` is the **Foundry resource**, not the project.
+- The role "Azure AI User" is now called **Foundry User**; other roles were renamed too (Foundry Project Manager, Foundry Account Owner).
+- Lab scripts run from the project root as modules: `python -m app.ai.lab01_smoke_test`.
+- The venv must be active in every new terminal: `source .venv/bin/activate`.
+- `.gitignore` already covered `.env` and `.venv`; appending without a trailing newline merged entries.
+
+### Lessons from the Lab 2 run
+- `InsufficientQuota` with `0 / 0` means the limit is zero, not exhausted; lowering capacity does not help. Find usable quota with `az cognitiveservices usage list -l <region> -o json` (the table view hides names).
+- Quota is per subscription, region, model and deployment type. 1 capacity unit on GlobalStandard/Standard = 1K tokens per minute.
+- `model=` takes the **deployment name** (missed in Lab 1 and again in Lab 2).
+- A 429 at capacity 10 means the TPM cap is exceeded: retry with backoff, raise capacity if quota allows, or spread across deployments. A gateway is one option, not the reading of the number.
+- Tuning a prompt on the eval set contaminates the eval set; keep held-out items.
+
 ### Lessons from the Lab 3 run
 - A resource provider must be registered once per subscription (`Microsoft.Search`); the CLI did it automatically.
 - `InsufficientResourcesAvailable` means regional capacity, not quota: try another region.
@@ -125,39 +181,14 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 - Top-k retrieval is incomplete by design: the food total was 140.3 instead of 152.8 because 2 of 6 food records were not retrieved, while the answer looked confident and showed its arithmetic. Totals, counts and averages belong in code or tools, not in the LLM; hand the model the computed number.
 - Least privilege: the app that only queries needs Search Index Data Reader, not Contributor.
 
-### Lab 2: Model selection and routing
-
-**D15. Compare `gpt-4.1-mini` against `gpt-4o`**
-- *Why:* `gpt-4.1` was the first choice but this subscription has 0 quota for it (`InsufficientQuota`). `gpt-4o` is a larger non-reasoning model with quota, so size is the main variable.
-- *Alternative:* reasoning models (`o4-mini`, `gpt-5-mini`): hidden reasoning tokens muddy a first comparison.
-- *Change when:* `gpt-4.1` quota is granted, or Lab 4 needs multi-step reasoning.
-
-**D16. Decide with a labelled set, not by feel.** Measured: accuracy, latency, tokens, cost per model. Result: mini 11/12 vs gpt-4o 12/12; `gpt-4o` costs about 7.6x more per expense. With a one-line instruction ("if several parts, choose the primary purpose") mini reached 12/12 too, at the cost of about +36% tokens (501 -> 705 per 12 items).
-- *Caveat:* the prompt was tuned on the same 12 items, so 12/12 is optimistic. Use held-out items before trusting it.
-
-**D17. Include ambiguous rows.** Clear rows make every model look perfect; only the ambiguous row separated the models. Wrong answers on ambiguous input are also low-stakes because the user can correct the category.
-
-**D18. Route by task: `categorize` -> mini, `advise` -> gpt-4o.** Cost follows volume. Static task routing is the right tool when the task is known in advance; the alternatives are a per-agent model (Lab 4), the Foundry `model-router` deployment (dynamic, for unpredictable prompts) and an API Management gateway (fallback, load balancing, Lab 6).
-
-**D19. Router config from env vars.** Swapping a model is a config change, not a code change.
-
-**D20. Second deployment is `Standard` (regional), capacity 10.** Quota is per model AND per deployment type: `Standard.gpt-4o` had 50, GlobalStandard had none. Regional costs about 21% more than global but keeps processing in Sweden.
-
-**D21. Prices from the Azure Retail Prices API** (`https://prices.azure.com/api/retail/prices`, no login). The Foundry compare page's "Estimated cost" is a benchmark index, not dollars. Prices used: mini global $0.40 in / $1.60 out per 1M; gpt-4o regional $3.025 / $12.10.
-
-### Lessons from the Lab 2 run
-- `InsufficientQuota` with `0 / 0` means the limit is zero, not exhausted; lowering capacity does not help. Find usable quota with `az cognitiveservices usage list -l <region> -o json` (the table view hides names).
-- Quota is per subscription, region, model and deployment type. 1 capacity unit on GlobalStandard/Standard = 1K tokens per minute.
-- `model=` takes the **deployment name** (missed in Lab 1 and again in Lab 2).
-- A 429 at capacity 10 means the TPM cap is exceeded: retry with backoff, raise capacity if quota allows, or spread across deployments. A gateway is one option, not the reading of the number.
-- Tuning a prompt on the eval set contaminates the eval set; keep held-out items.
-
-### Lessons from the Lab 1 run (so we don't repeat them)
-- The CLI `--name` is the **Foundry resource**, not the project.
-- The role "Azure AI User" is now called **Foundry User**; other roles were renamed too (Foundry Project Manager, Foundry Account Owner).
-- Lab scripts run from the project root as modules: `python -m app.ai.lab01_smoke_test`.
-- The venv must be active in every new terminal: `source .venv/bin/activate`.
-- `.gitignore` already covered `.env` and `.venv`; appending without a trailing newline merged entries.
+### Lessons from the Lab 4 run
+- A function tool is executed by YOUR process: the model returns a `function_call`, your code runs it and replies with a `function_call_output` using the same `call_id`. The Foundry playground can show the call but cannot run your local function.
+- Observed: totals triggered `get_spending_summary` once; the follow-ups ("transport", "largest") made **no** tool call because the thread already held the result (saves calls, but can go stale if data changes mid-conversation).
+- Tool output hygiene: the raw Search result included `@search.*` metadata (about 900 characters per lookup, resent as input tokens every turn). Return only the fields the model needs.
+- A vector or hybrid lookup for "Japan" returned 5 unrelated records (always k results); the agent correctly judged none mentioned Japan. Relevance judgment was left to the model; a score threshold would make it explicit.
+- Instructions are a steering layer, not a security boundary. The reliable defence is the capability being absent (read-only tools) or behind human approval. Injected text can also arrive through retrieved data, not only the user message.
+- Memory extraction is asynchronous (`update_delay`, 300 s by default), so a fact is not instantly available.
+- Debug prints of raw tool outputs expose data: remove them or move to logging (Lab 6).
 
 ## 4. Lab format (every lab must follow this)
 
@@ -173,9 +204,10 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 | Lab | State |
 |---|---|
 | 1 Foundation | Done; self-check 2.5/4 (missed: `model=` is the deployment name; weak on the reasons for keyless auth) |
-| 3 Grounding (AI Search) | Done 2026-11-03, see `plans/lab-03-grounding.md`; self-check 4.5/6 (missed: least-privilege role is Index Data Reader; aggregation belongs in code, not the LLM) |
-| 4 Advisor agent | Next (tools for aggregation, knowledge = this index, memory) |
 | 2 Model selection and routing | Done (committed 74bb336); run complete 2026-11-03; self-check 3.5/5 (missed: `model=` is the deployment name again; meaning of 429 at capacity 10). Pending: Monitor tab check |
+| 3 Grounding (AI Search) | Done 2026-11-03, see `plans/lab-03-grounding.md`; self-check 4.5/6 (missed: least-privilege role is Index Data Reader; aggregation belongs in code, not the LLM) |
+| 4 Advisor agent | Done 2026-11-03, see `plans/lab-04-advisor-agent.md`; self-check 7/7, all tasks run (chat, tool calls, memory); Task 6 answered |
+| 5 Delivery (IaC, CI/CD) | Next |
 
 Theory source: Udemy "Microsoft AI-103: Azure AI Apps and Agents Developer Course". Workflow: finish a course section, then do its labs here.
 - Section 2 (Choose Services and Set Up Foundry): theory covered 2026-11-02, maps to Labs 1-5. Section 2 quiz: not logged yet.

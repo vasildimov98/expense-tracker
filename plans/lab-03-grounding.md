@@ -334,7 +334,7 @@ Finally, try a filter: `odata_filter="category eq 'Food' and amount gt 30"`.
 
 ## 4. Verification (UI)
 
-Portal -> search service -> Indexes -> `expenses` -> Search explorer. Run `caffeine` as JSON with a vector query is awkward by hand, so use the explorer for what it is good at: confirm document count, inspect a document, run a keyword query with `$filter=category eq 'Food'` and `$count=true`. Check **Monitoring** on the service for your query count.
+Portal -> search service -> Search management -> Indexes -> `expenses` -> Search explorer. Confirm the document count (21) and inspect a document. A keyword query in the JSON editor is `{"search": "latte", "count": true}`; a filter is **its own key**: `{"search": "*", "filter": "category eq 'Food'", "count": true}`. Writing `$filter=...` inside `search` makes it a search *term* and returns 0 results (a mistake made in the Lab 3 run). Vector queries are awkward by hand, so use the scripts for those. Check **Monitoring** on the service for your query count.
 
 ## 5. Self-check (exam style)
 
