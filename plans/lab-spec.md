@@ -92,6 +92,39 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 - *Consequence:* the guardrails are D6 (TPM cap), D2 (one group to delete) and manual checks on the Monitor tab.
 - *Change when:* moving to a subscription type that supports Cost Management.
 
+### Lab 3: Grounding with Azure AI Search
+
+**D22. Azure AI Search Free tier.** $0 while idle, supports vector search; limits 50 MB / 3 indexes, one free service per subscription. Kept after the lab because Lab 4 reuses the index (Free services may be removed after long inactivity; the build script recreates everything). *Alternative:* Basic (~$70+/month, hourly billing). *Change when:* more data, replicas or SLA are needed.
+
+**D23. Embedding model `text-embedding-3-small` (1536 dims), GlobalStandard, capacity 10.** Cheapest current embedding model, enough for short text. Quota for it was 1000 units, no issue. *Alternative:* `-large` (3072 dims, ~6x price).
+
+**D24. One expense = one document, no chunking.** Chunking is for long documents; revisit for statements and receipts.
+
+**D25. Embed a natural-language sentence, keep structured fields separate.** Vectors capture meaning; amount and category stay exact and filterable.
+
+**D26. Hybrid search plus `$filter`.** Observed on our 21 documents: for "caffeine" keyword returned nothing while vector and hybrid found the coffee rows; for "Lidl" every mode ranked it first (vector-only drifting is expected only at scale). A vector query always returns k results, even irrelevant ones (Cinema, Netflix for "caffeine"), so there is no built-in "no match": keyword gives an honest empty result, and the grounded prompt must say "I don't know".
+
+**D27. HNSW, cosine.** Standard approximate nearest-neighbour setup.
+
+**D28. Search access via RBAC, no admin keys.** Roles: Service Contributor (create index), Index Data Contributor (upload), Index Data Reader (query: what the app should hold). Setup `aadOrApiKey` was accepted on the Free tier.
+
+**D29. Deterministic ids plus `merge_or_upload_documents`.** Re-running the build keeps 21 documents instead of duplicating.
+
+**D30. Grounded answers: "answer ONLY from the records, say so if missing, cite ids".** Verified: "How much did I spend in Japan?" returned "I do not have that information".
+
+**D31. Search service in `northeurope`, not `swedencentral`.** swedencentral returned `InsufficientResourcesAvailable` (Azure capacity, not quota). Search does not have to share a region with Foundry here because the client embeds the text and calls each service separately. Trade-off: a few ms of latency and an exception to D3. *Change when:* data residency rules or integrated vectorization (service-to-service calls) require co-location.
+
+**D32. Separate embeddings client on the resource-level endpoint.** The project-scoped endpoint behind `get_openai_client()` returns an empty `404` for `/embeddings`; `get_embeddings_client()` uses `<resource>/openai/v1/` with a keyless token provider, built from the same `FOUNDRY_PROJECT_ENDPOINT`.
+
+### Lessons from the Lab 3 run
+- A resource provider must be registered once per subscription (`Microsoft.Search`); the CLI did it automatically.
+- `InsufficientResourcesAvailable` means regional capacity, not quota: try another region.
+- SKU = the pricing/capability tier: `--sku` for Search, `--sku-name` / `--sku-capacity` for model deployments.
+- `model=` takes the deployment name, never the model name (got it right in Lab 3 after missing it in Labs 1 and 2).
+- An empty `404` on a path that exists elsewhere usually means the route is not served on that endpoint, not that the deployment is missing.
+- Top-k retrieval is incomplete by design: the food total was 140.3 instead of 152.8 because 2 of 6 food records were not retrieved, while the answer looked confident and showed its arithmetic. Totals, counts and averages belong in code or tools, not in the LLM; hand the model the computed number.
+- Least privilege: the app that only queries needs Search Index Data Reader, not Contributor.
+
 ### Lab 2: Model selection and routing
 
 **D15. Compare `gpt-4.1-mini` against `gpt-4o`**
@@ -140,7 +173,9 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 | Lab | State |
 |---|---|
 | 1 Foundation | Done; self-check 2.5/4 (missed: `model=` is the deployment name; weak on the reasons for keyless auth) |
-| 2 Model selection and routing | Run complete 2026-11-03; self-check 3.5/5 (missed: `model=` is the deployment name again; meaning of 429 at capacity 10). Pending: Monitor tab check |
+| 3 Grounding (AI Search) | Done 2026-11-03, see `plans/lab-03-grounding.md`; self-check 4.5/6 (missed: least-privilege role is Index Data Reader; aggregation belongs in code, not the LLM) |
+| 4 Advisor agent | Next (tools for aggregation, knowledge = this index, memory) |
+| 2 Model selection and routing | Done (committed 74bb336); run complete 2026-11-03; self-check 3.5/5 (missed: `model=` is the deployment name again; meaning of 429 at capacity 10). Pending: Monitor tab check |
 
 Theory source: Udemy "Microsoft AI-103: Azure AI Apps and Agents Developer Course". Workflow: finish a course section, then do its labs here.
 - Section 2 (Choose Services and Set Up Foundry): theory covered 2026-11-02, maps to Labs 1-5. Section 2 quiz: not logged yet.

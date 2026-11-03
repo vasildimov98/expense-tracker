@@ -1,0 +1,23 @@
+[
+  {"category": "Food", "amount": 4.5, "description": "Starbucks latte", "date": "2026-10-02"},
+  {"category": "Food", "amount": 62.3, "description": "Lidl weekly groceries", "date": "2026-10-04"},
+  {"category": "Food", "amount": 38.0, "description": "Pizza dinner with friends", "date": "2026-10-09"},
+  {"category": "Transport", "amount": 18.5, "description": "Uber ride to airport", "date": "2026-10-11"},
+  {"category": "Transport", "amount": 45.0, "description": "Monthly metro pass", "date": "2026-10-01"},
+  {"category": "Entertainment", "amount": 12.99, "description": "Netflix subscription", "date": "2026-10-05"},
+  {"category": "Entertainment", "amount": 24.0, "description": "Cinema tickets", "date": "2026-10-17"},
+  {"category": "Utilities", "amount": 71.2, "description": "Electricity bill October", "date": "2026-10-20"},
+  {"category": "Utilities", "amount": 29.9, "description": "Internet and phone plan", "date": "2026-10-21"},
+  {"category": "Other", "amount": 35.0, "description": "Gift for a colleague", "date": "2026-10-23"},
+  {"category": "Other", "amount": 20.0, "description": "Charity donation", "date": "2026-10-25"},
+  {"category": "Food", "amount": 15.0, "description": "Lunch at local cafe", "date": "2026-10-26"},
+  {"category": "Transport", "amount": 10.0, "description": "Taxi ride", "date": "2026-10-27"},
+  {"category": "Entertainment", "amount": 50.0, "description": "Concert tickets", "date": "2026-10-28"},
+  {"category": "Utilities", "amount": 60.0, "description": "Water bill", "date": "2026-10-29"},
+  {"category": "Other", "amount": 40.0, "description": "Book purchase", "date": "2026-10-30"},
+  {"category": "Food", "amount": 25.0, "description": "Dinner at Italian restaurant", "date": "2026-10-31"},
+  {"category": "Transport", "amount": 15.0, "description": "Bus fare", "date": "2026-10-31"},
+  {"category": "Entertainment", "amount": 30.0, "description": "Theater play", "date": "2026-10-31"},
+  {"category": "Other", "amount": 15.0, "description": "Stationery purchase", "date": "2026-10-31"},
+  {"category": "Food", "amount": 8.0, "description": "Breakfast at bakery", "date": "2026-10-31"}
+]

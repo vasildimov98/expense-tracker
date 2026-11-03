@@ -1,7 +1,8 @@
 """Single place that knows how to talk to Microsoft Foundry."""
 import os
 from dotenv import load_dotenv
-from azure.identity import DefaultAzureCredential
+import openai
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from azure.ai.projects import AIProjectClient
 
 load_dotenv()  # reads .env into environment variables
@@ -23,4 +24,15 @@ def get_openai_client():
     return get_project_client().get_openai_client()
 
 
-DEPLOYMENT = os.environ["FOUNDRY_MODEL_DEPLOYMENT"]
+def get_embeddings_client() -> openai.OpenAI:
+    # The project-scoped endpoint does not serve /embeddings (empty 404), so
+    # use the resource-level OpenAI v1 endpoint, still keyless: the token
+    # provider fetches Entra tokens for the Foundry/Cognitive Services scope.
+    resource = os.environ["FOUNDRY_PROJECT_ENDPOINT"].split("/api/projects")[0]
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+    )
+    return openai.OpenAI(base_url=f"{resource}/openai/v1/", api_key=token_provider)
+
+
+DEPLOYMENT =os.environ["FOUNDRY_MODEL_DEPLOYMENT"]
