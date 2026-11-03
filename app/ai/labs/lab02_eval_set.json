@@ -1,0 +1,14 @@
+[
+  {"description": "Starbucks latte", "label": "Food"},
+  {"description": "Uber ride to airport", "label": "Transport"},
+  {"description": "Netflix monthly subscription", "label": "Entertainment"},
+  {"description": "Electricity bill October", "label": "Utilities"},
+  {"description": "Lidl groceries", "label": "Food"},
+  {"description": "Monthly metro pass", "label": "Transport"},
+  {"description": "Cinema tickets", "label": "Entertainment"},
+  {"description": "Internet and phone plan", "label": "Utilities"},
+  {"description": "Dinner and a movie night", "label": "Entertainment"},
+  {"description": "Gas station: fuel and a sandwich", "label": "Transport"},
+  {"description": "Spotify family plan", "label": "Entertainment"},
+  {"description": "Gift for a colleague", "label": "Other"}
+]
