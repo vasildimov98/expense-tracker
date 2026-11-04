@@ -4,7 +4,7 @@ import os
 
 from azure.ai.projects.models import FunctionTool
 
-from app.ai.labs.lab03_query import retrieve
+from app.ai.retrieval import retrieve
 from app.models import Category
 from app.services.expense_service import ExpenseService
 from app.storage import JsonExpenseStorage
