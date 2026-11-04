@@ -103,8 +103,18 @@ if az search service show -n "$SEARCH_NAME" -g "$RG" -o none 2>/dev/null; then
   say "Search service $SEARCH_NAME exists, skipping"
 else
   say "Create Search service $SEARCH_NAME in $SEARCH_LOCATION"
-  az search service create -n "$SEARCH_NAME" -g "$RG" -l "$SEARCH_LOCATION" --sku free \
-    --auth-options aadOrApiKey --aad-auth-failure-mode http401WithBearerChallenge -o none
+  # A just-deleted service keeps its name for a few minutes (error ServiceDeleting): retry.
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if out=$(az search service create -n "$SEARCH_NAME" -g "$RG" -l "$SEARCH_LOCATION" --sku free \
+        --auth-options aadOrApiKey --aad-auth-failure-mode http401WithBearerChallenge -o none 2>&1); then
+      break
+    fi
+    if [[ "$out" == *ServiceDeleting* && $attempt -lt 10 ]]; then
+      echo "  name still being released (attempt $attempt/10), waiting 60 s..."; sleep 60
+    else
+      echo "$out" >&2; exit 1
+    fi
+  done
 fi
 
 # ---- 5. roles for YOUR user (data plane, D8, D28) ---------------------------
