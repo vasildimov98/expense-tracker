@@ -158,6 +158,38 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 
 **D42. Memory is preview and stores personal facts.** Decide retention (TTL, default never expires) and deletion (`delete_scope`) before production.
 
+### Lab 5: Delivery (tests, Bicep, CI/CD)
+
+Full table with rejected alternatives and change triggers: `plans/lab-05-delivery.md`.
+
+**D43. Bicep for infrastructure.** Native, early support for new resource types, `what-if`, no state file. *Change when:* the team standardizes on Terraform or spans clouds.
+
+**D44. One resource group and one parameter file per environment (`dev`, `test`, `work`).** Same template, different parameters, so environments cannot drift apart by hand.
+
+**D45. `disableLocalAuth: true` on the AI account.** Keyless (D8) becomes a platform rule: keys cannot be used even if someone creates one.
+
+**D46. Model deployments as an array parameter created one at a time (`@batchSize(1)`, `dependsOn` the project).** The service rejects concurrent operations on one account.
+
+**D47. Search behind `deploySearch` with its own `searchLocation`.** One Free service per subscription (D22) and regional capacity limits (D31).
+
+**D48. Role assignments are not in the pipeline.** A pipeline that can grant roles can grant itself Owner. RBAC stays human-run.
+
+**D49. CI has no Azure access.** Tests use stubs: fast, free, safe for any pull request. Verified: green on a clean GitHub runner.
+
+**D50. OIDC federation instead of a client secret.** Short-lived token issued by GitHub, trusted by Azure for one repo and environment. Nothing to leak or rotate.
+
+**D51. Federated credential bound to the GitHub environment `test` with a required reviewer.** Only a run in that gated environment gets a token; a repo-wide or branch-only binding would let any workflow or PR obtain one.
+
+**D52. Pipeline identity is Contributor on `rg-expense-ai-test` only.** It can deploy there and cannot grant roles or touch anything else.
+
+**D53. Pinned dependencies and Actions pinned to a major version.** Reproducible builds; a SHA pin is stronger.
+
+**D54. `versionUpgradeOption: NoAutoUpgrade`.** Found by `what-if`: live deployments auto-upgrade model versions, which silently changes behavior.
+
+**D55. State `raiPolicyName` explicitly.** The content filter is part of the environment spec (Lab 7 will change it).
+
+**D56. Rebuild path = Bicep + a thin script (`scripts/azure/rebuild.sh`, `infra/work.bicepparam`).** Names come from environment variables (`readEnvironmentVariable`, fails loudly if unset); the script keeps only providers, resource group, human-run roles and the printed `.env`, with a what-if and confirmation before deploying. *Change when:* a mature RBAC process lets a pipeline do the roles. Unverified until the first run in the work subscription.
+
 ### Lessons from the Lab 1 run (so we don't repeat them)
 - The CLI `--name` is the **Foundry resource**, not the project.
 - The role "Azure AI User" is now called **Foundry User**; other roles were renamed too (Foundry Project Manager, Foundry Account Owner).
@@ -190,6 +222,17 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 - Memory extraction is asynchronous (`update_delay`, 300 s by default), so a fact is not instantly available.
 - Debug prints of raw tool outputs expose data: remove them or move to logging (Lab 6).
 
+### Lessons from the Lab 5 run
+- A test that passes when the code is broken is worthless: with amounts that were already round, the rounding test could not detect a removed `round()`. Change the code on purpose (mutation check) and make the test data (10.25, 5.5) make the change visible.
+- `pytest.ini` (`pythonpath`, `testpaths`) makes imports work; `conftest.py` is found automatically and sets dummy env vars with `setdefault` before the app modules import, so tests never need a real `.env`.
+- `what-if` lists many `-` lines for properties the template does not set (Azure fills them in): read the `+` and `~` lines on properties you do set. Its real catch here was the auto-upgrade of model versions (D54).
+- `RequestConflict`: project and deployments created in parallel on one account. Fix with `dependsOn`. Typing in the terminal cancelled the CLI wait but the deployment kept running; check with `az deployment group list`.
+- Bicep: `hostingMode: 'default'` triggered warning BCP036 (the value is `Default`); removing the line uses the default.
+- Deleted AI accounts are soft-deleted and keep their name until purged: delete the group, then `az cognitiveservices account purge`.
+- OIDC login failed twice, both configuration: (1) the subscription ID was pasted into `AZURE_TENANT_ID` (both are GUIDs; error `invalid_tenant`); take both from `az account show`. (2) GitHub now issues ID-based subjects (`repo:owner@id/repo@id:environment:test`), so the credential with the plain subject gave AADSTS700213. A federated credential is an exact match on issuer, subject and audience: compare the "Federated token details" in the login log with the stored credential.
+- A successful what-if against an already deployed template shows only noise, which is the proof that template and environment agree.
+- `workflow_dispatch` ("Run workflow") only appears once the workflow file is on the default branch, so commit and push first.
+
 ## 4. Lab format (every lab must follow this)
 
 1. **Spec first:** goal, requirements, constraints, and a decision table (each choice with *why* and the alternative rejected).
@@ -207,7 +250,7 @@ Format: **Decision / Why / Trade-off or alternative / When we'd change it.**
 | 2 Model selection and routing | Done (committed 74bb336); run complete 2026-11-03; self-check 3.5/5 (missed: `model=` is the deployment name again; meaning of 429 at capacity 10). Pending: Monitor tab check |
 | 3 Grounding (AI Search) | Done 2026-11-03, see `plans/lab-03-grounding.md`; self-check 4.5/6 (missed: least-privilege role is Index Data Reader; aggregation belongs in code, not the LLM) |
 | 4 Advisor agent | Done 2026-11-03, see `plans/lab-04-advisor-agent.md`; self-check 7/7, all tasks run (chat, tool calls, memory); Task 6 answered |
-| 5 Delivery (IaC, CI/CD) | Spec written 2026-11-03, see `plans/lab-05-delivery.md` (D43-D53 proposed; Bicep API versions unverified, validated by the user in Task 3) |
+| 5 Delivery (IaC, CI/CD) | Done 2026-11-04, see `plans/lab-05-delivery.md`; D43-D56 logged; self-check 5/7 (partial: why the test env vars are safe, why the pipeline cannot create roles, soft-delete purge, why the credential is bound to an environment). Verified: 8 tests + mutation, Bicep deployed to `rg-expense-ai-test`, CI green, OIDC deploy green behind approval. Unverified: `rebuild.sh` with `work.bicepparam` in a new subscription. Cleanup pending |
 | 6 Ops (quotas, cost, monitoring, managed identity, networking) | Waits for course Section 3 theory |
 | 7-8 Safety (content filters, evaluators, tracing, tool-access control) | Wait for theory |
 
