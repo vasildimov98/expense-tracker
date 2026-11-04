@@ -1,0 +1,29 @@
+name: deploy-test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["infra/**"]
+
+permissions:
+  id-token: write      # lets the job request an OIDC token
+  contents: read
+
+concurrency: deploy-test   # never two deployments at once
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: test        # the federated credential only accepts this environment
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: What-if
+        run: az deployment group what-if -g rg-expense-ai-test -p infra/test.bicepparam
+      - name: Deploy
+        run: az deployment group create -g rg-expense-ai-test -p infra/test.bicepparam
