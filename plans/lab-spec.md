@@ -251,8 +251,9 @@ Full table with rejected alternatives and change triggers: `plans/lab-05-deliver
 | 3 Grounding (AI Search) | Done 2026-11-03, see `plans/lab-03-grounding.md`; self-check 4.5/6 (missed: least-privilege role is Index Data Reader; aggregation belongs in code, not the LLM) |
 | 4 Advisor agent | Done 2026-11-03, see `plans/lab-04-advisor-agent.md`; self-check 7/7, all tasks run (chat, tool calls, memory); Task 6 answered |
 | 5 Delivery (IaC, CI/CD) | Done 2026-11-04, see `plans/lab-05-delivery.md`; D43-D56 logged; self-check 5/7 (partial: why the test env vars are safe, why the pipeline cannot create roles, soft-delete purge, why the credential is bound to an environment). Verified: 8 tests + mutation, Bicep deployed to `rg-expense-ai-test`, CI green, OIDC deploy green behind approval. Unverified: `rebuild.sh` with `work.bicepparam` in a new subscription. Cleanup pending |
-| 6 Ops (quotas, cost, monitoring, managed identity, networking) | Waits for course Section 3 theory |
-| 7-8 Safety (content filters, evaluators, tracing, tool-access control) | Wait for theory |
+| 6 Ops (quotas, cost, monitoring, managed identity, networking) | Theory done (Section 3). Plan written 2026-11-09: `plans/lab-06-ops.md`, D57-D67 proposed. Not started |
+| 7 Guardrails and evaluation (content filters, Prompt Shields, evaluators, red teaming) | Theory done (Section 4). Plan written 2026-11-09: `plans/lab-07-guardrails-evals.md`, D68-D77 proposed. Not started |
+| 8 Audit and governance (traces, provenance, approvals, tool access) | Plan written 2026-11-09: `plans/lab-08-audit-governance.md`, D78-D88 proposed. Not started |
 
 Theory source: Udemy "Microsoft AI-103: Azure AI Apps and Agents Developer Course". Workflow: finish a course section, then do its labs here.
 - Section 2 (Choose Services and Set Up Foundry): theory covered 2026-11-02, maps to Labs 1-5. Section 2 quiz: not logged yet.
