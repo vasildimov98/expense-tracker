@@ -1,4 +1,7 @@
+from app.ai import usage
 from app.ai.advisor_agent import chat, create_agent
+
+usage.enable_console("usage.jsonl")
 
 agent = create_agent()
 print(f"Agent {agent.name} version {agent.version}\n")

@@ -108,3 +108,28 @@ def test_stops_retrying_when_time_budget_is_spent(clock, monkeypatch):
         run(fn, ["primary"], clock)
     assert calls == ["primary"]        # gave up instead of sleeping 10 s
     assert clock.sleeps == []
+
+
+def make_timeout() -> openai.APITimeoutError:
+    return openai.APITimeoutError(request=httpx.Request("POST", "https://example.invalid/responses"))
+
+
+def test_timeout_is_retried_and_can_fail_over(clock):
+    def fn(deployment):
+        if deployment == "primary":
+            raise make_timeout()          # the service held the request and never answered
+        return "from fallback"
+
+    assert run(fn, ["primary", "fallback"], clock) == "from fallback"
+
+
+def test_connection_errors_other_than_timeout_are_not_retried(clock):
+    calls = []
+
+    def fn(deployment):
+        calls.append(deployment)
+        raise openai.APIConnectionError(request=httpx.Request("POST", "https://example.invalid"))
+
+    with pytest.raises(openai.APIConnectionError):
+        run(fn, ["primary", "fallback"], clock)
+    assert calls == ["primary"]

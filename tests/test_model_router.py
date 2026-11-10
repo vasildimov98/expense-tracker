@@ -44,3 +44,17 @@ def test_ask_retries_then_fails_over(monkeypatch):
     monkeypatch.setattr(model_router, "_client", lambda: FakeClient())
     assert model_router.ask("categorize", "i", "x", 20) == "from fallback"
     assert seen[-1] == "fallback" and seen[0] == "primary"
+
+
+def test_ask_refuses_before_calling_the_model_when_cap_is_spent(monkeypatch):
+    from app.ai import usage
+
+    def spent():
+        raise usage.DailyCapExceeded("cap")
+
+    called = []
+    monkeypatch.setattr(usage, "check_cap", spent)
+    monkeypatch.setattr(model_router, "_client", lambda: called.append(1))
+    with pytest.raises(usage.DailyCapExceeded):
+        model_router.ask("categorize", "i", "x", 20)
+    assert called == []      # no client was even built: nothing was spent

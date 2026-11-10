@@ -1,4 +1,7 @@
+from app.ai import usage
 from app.ai.model_router import ask, deployment_for
+
+usage.enable_console("usage.jsonl")
 
 print(deployment_for("categorize"), deployment_for("advise"))
 print(ask("categorize", "Answer with one word: the expense category.", "Lidl groceries", 16))

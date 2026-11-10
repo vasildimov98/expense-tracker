@@ -5,7 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 import openai
 
+from app.ai import usage
 from app.ai.model_router import ask
+
+usage.enable_console("usage.jsonl")   # one JSON line per successful call
 
 
 def one(i: int) -> str:
@@ -14,6 +17,8 @@ def one(i: int) -> str:
         return "ok"
     except openai.RateLimitError:
         return "429 (gave up)"
+    except openai.APITimeoutError:
+        return "timeout (gave up)"
 
 
 start = time.time()

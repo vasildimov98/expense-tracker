@@ -20,7 +20,13 @@ def _delay(attempt: int, retry_after: float | None) -> float:
     return random.uniform(0, backoff)          # full jitter
 
 
-def _retry_after(error: openai.RateLimitError) -> float | None:
+# Transient failures worth another try: throttled (429) or no answer in time.
+RETRYABLE = (openai.RateLimitError, openai.APITimeoutError)
+
+
+def _retry_after(error: Exception) -> float | None:
+    if not isinstance(error, openai.RateLimitError):
+        return None                            # a timeout carries no server hint
     value = error.response.headers.get("retry-after")
     try:
         return float(value) if value is not None else None
@@ -44,7 +50,7 @@ def call_with_retry(
         for attempt in range(MAX_ATTEMPTS):
             try:
                 return fn(deployment)
-            except openai.RateLimitError as error:
+            except RETRYABLE as error:
                 last_error = error
                 wait = _delay(attempt, _retry_after(error))
                 if now() - started + wait > TOTAL_BUDGET:

@@ -1,8 +1,10 @@
 """The Expense Advisor agent: definition in Foundry, tools executed locally."""
+import time
 from functools import lru_cache
 
 from azure.ai.projects.models import PromptAgentDefinition
 
+from app.ai import usage
 from app.ai.advisor_tools import TOOLS, run_tool
 from app.ai.foundry_client import get_project_client
 from app.ai.model_router import deployment_for
@@ -41,7 +43,15 @@ def chat(text: str, previous_response_id: str | None = None):
     agent = {"extra_body": {"agent_reference": {"name": AGENT_NAME, "type": "agent_reference"}},
              "max_output_tokens": 500}
     kwargs = {"previous_response_id": previous_response_id} if previous_response_id else {}
-    response = _client().responses.create(input=text, **agent, **kwargs)
+
+    def create(**call_kwargs):
+        usage.check_cap()   # every round can cost tokens, so check every round
+        started = time.monotonic()
+        result = _client().responses.create(**call_kwargs)
+        usage.record_response("advise", AGENT_NAME, result, time.monotonic() - started)
+        return result
+
+    response = create(input=text, **agent, **kwargs)
     for _ in range(MAX_TOOL_ROUNDS):
         calls = [item for item in response.output if item.type == "function_call"]
         if not calls:
@@ -51,7 +61,5 @@ def chat(text: str, previous_response_id: str | None = None):
              "output": run_tool(c.name, c.arguments)}
             for c in calls
         ]
-        response = _client().responses.create(
-            input=outputs, previous_response_id=response.id, **agent
-        )
+        response = create(input=outputs, previous_response_id=response.id, **agent)
     raise RuntimeError(f"No final answer after {MAX_TOOL_ROUNDS} tool rounds")

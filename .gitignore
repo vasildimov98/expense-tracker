@@ -223,3 +223,6 @@ __marimo__/
 expenses.json
 expenses.bak
 scratch.py
+
+# Lab 6 usage log (activity data)
+usage.jsonl

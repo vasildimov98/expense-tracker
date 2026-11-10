@@ -1,7 +1,9 @@
 """Maps a task to the cheapest deployment that meets its quality bar."""
 import os
+import time
 from functools import lru_cache
 
+from app.ai import usage
 from app.ai.foundry_client import get_openai_client
 from app.ai.resilience import call_with_retry
 
@@ -39,13 +41,19 @@ def fallbacks_for(task: str) -> list[str]:
 
 
 def ask(task: str, instructions: str, user_input: str, max_output_tokens: int) -> str:
+    usage.check_cap()   # fail closed BEFORE spending anything (D61)
+
     def call(deployment: str):
-        return _client().responses.create(
+        started = time.monotonic()
+        response = _client().responses.create(
             model=deployment,   # deployment NAME, as always
             instructions=instructions,
             input=user_input,
             max_output_tokens=max_output_tokens,
         )
+        # Only successful attempts reach here, so throttled tries are not logged.
+        usage.record_response(task, deployment, response, time.monotonic() - started)
+        return response
 
     response = call_with_retry(call, [deployment_for(task), *fallbacks_for(task)])
     return response.output_text
