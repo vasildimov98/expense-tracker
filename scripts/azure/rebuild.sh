@@ -76,6 +76,20 @@ done
 az role assignment create --assignee "$ME" --role "Foundry User" --scope "$ACCOUNT_ID" -o none 2>/dev/null \
   || az role assignment create --assignee "$ME" --role "Azure AI User" --scope "$ACCOUNT_ID" -o none
 
+# ---- 3b. runtime identity for the deployed app (Lab 6, D65-D66) -------------
+# A user-assigned managed identity: no secret to store, can be attached to a host later.
+# Least privilege: it can call models/agents in the project and READ the index, nothing else.
+say "Runtime identity id-expense-advisor-app and its two roles"
+az identity create -g "$RG" -n id-expense-advisor-app -l "$LOCATION" -o none
+APP_PRINCIPAL=$(az identity show -g "$RG" -n id-expense-advisor-app --query principalId -o tsv)
+PROJECT_ID="$ACCOUNT_ID/projects/$PROJECT"
+az role assignment create --assignee-object-id "$APP_PRINCIPAL" --assignee-principal-type ServicePrincipal \
+  --role "Foundry User" --scope "$PROJECT_ID" -o none 2>/dev/null \
+  || az role assignment create --assignee-object-id "$APP_PRINCIPAL" --assignee-principal-type ServicePrincipal \
+       --role "Azure AI User" --scope "$PROJECT_ID" -o none
+az role assignment create --assignee-object-id "$APP_PRINCIPAL" --assignee-principal-type ServicePrincipal \
+  --role "Search Index Data Reader" --scope "$SEARCH_ID" -o none
+
 # ---- 4. print the .env values (endpoints come from the deployment outputs) --
 say "Done. Put this in .env (keyless: no secrets are needed)"
 cat <<EOF

@@ -60,7 +60,9 @@ resource search 'Microsoft.Search/searchServices@2025-05-01' = if (deploySearch)
   properties: {
     replicaCount: 1
     partitionCount: 1
-    authOptions: { aadOrApiKey: { aadAuthFailureMode: 'http401WithBearerChallenge' } }
+    // D65: keyless is enforced. Search rejects authOptions together with disableLocalAuth,
+    // so authOptions is deliberately absent. Entra ID is then the only way in.
+    disableLocalAuth: true
   }
 }
 
