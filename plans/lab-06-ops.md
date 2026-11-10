@@ -233,7 +233,7 @@ Call `check_cap()` before and `record()` after every `responses.create` (in `mod
 
 **Steps.**
 1. Portal: Foundry project -> Tracing (or Monitoring) -> connect/create **Application Insights** (workspace-based). If you prefer the CLI: `az monitor log-analytics workspace create` then `az monitor app-insights component create --workspace <id> ...`.
-2. Install and wire (package names to verify with `pip index versions`, then pin them, Lab 5 rule): `azure-monitor-opentelemetry`, and the OpenAI/Foundry instrumentation Foundry's Tracing tab links you to. Read the connection string from the project instead of copying it by hand (it is a secret-adjacent value):
+2. Install and wire (verified 2026-11-10: `azure-monitor-opentelemetry==1.8.12`; the Foundry SDK already ships `AIProjectInstrumentor`, so no separate OpenAI instrumentation package is needed). Read the connection string from the project instead of copying it by hand (it is a secret-adjacent value). The working code is `app/ai/telemetry.py`; the snippet below is the idea:
    ```python
    # app/ai/telemetry.py
    from azure.monitor.opentelemetry import configure_azure_monitor
