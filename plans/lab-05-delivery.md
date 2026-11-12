@@ -501,17 +501,24 @@ Notice the pattern: **the same code runs everywhere because identity is resolved
 
 ## 5. Self-check (exam style)
 
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
+
 1. A GitHub workflow must deploy to Azure. Which is the most secure way to authenticate?
    A. A service principal secret in GitHub secrets  B. A storage-account key  C. OIDC workload identity federation  D. The deployer's personal password
 2. What does `az deployment group what-if` do?
    A. Deploys and rolls back on failure  B. Previews which resources would be created, modified or deleted without changing anything  C. Validates only the syntax  D. Deletes resources not in the template
 3. Why does the template set `disableLocalAuth: true`?
-4. Your tests need `FOUNDRY_MODEL_DEPLOYMENT` at import time but must never call Azure. What is the right approach, and why can it not accidentally reach your real endpoint on your laptop?
+   A. Keys cannot be used even if someone creates one, so keyless becomes a platform rule  B. It is required for private endpoints  C. It lowers the cost of the account  D. It makes calls faster
+4. Your tests need `FOUNDRY_MODEL_DEPLOYMENT` at import time but must never call Azure. What is the right approach?
+   A. Copy the real `.env` into the CI runner  B. `conftest.py` sets dummy values with `setdefault`, and the tests replace the client with stubs so no network call happens  C. Skip every test that imports the module  D. Point the tests at the production endpoint with a read-only key
 5. Why is the pipeline identity not allowed to create role assignments?
-6. After deleting `rg-expense-ai-test`, deploying the same account name fails. Why, and what is the fix?
-7. Why is the federated credential tied to the GitHub environment `test` instead of only to the repository?
+   A. Azure forbids role assignments from pipelines  B. Role assignments take too long for a pipeline  C. Pipelines cannot get Azure tokens  D. A pipeline that can grant roles can grant itself Owner
+6. After deleting `rg-expense-ai-test`, deploying the same account name fails. Why, and what fixes it?
+   A. Deleted AI accounts are soft-deleted and keep the name until purged; purge the old account  B. The subscription quota is exhausted; request more  C. Account names are reserved for ever once used  D. The resource group still exists; delete it again
+7. Why is the federated credential tied to the GitHub environment `test` and not only to the repository?
+   A. Environments rotate the secret automatically  B. Only a run in the gated environment gets a token; a repository-wide binding would let any workflow or pull request obtain one  C. Environments make the login faster  D. Azure requires an environment for every federated credential
 
-Send your answers and I will mark them.
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 

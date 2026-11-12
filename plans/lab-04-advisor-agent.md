@@ -342,6 +342,8 @@ Foundry portal -> project -> **Agents**: `expense-advisor` with its versions, to
 
 ## 5. Self-check (exam style)
 
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
+
 1. The agent responds with a `function_call` for `get_spending_summary`. Where does the function run?
    A. In Foundry Agent Service  B. Inside the model  C. In your own application process  D. In Azure Functions automatically
 2. Which is the best fix for "the agent's monthly total is sometimes wrong"?
@@ -349,11 +351,15 @@ Foundry portal -> project -> **Agents**: `expense-advisor` with its versions, to
 3. Which mechanism lets the agent recall a user's budget in a **new** conversation next week?
    A. `previous_response_id`  B. A memory store  C. A larger `max_output_tokens`  D. Chat Completions
 4. Why is `delete_expense` deliberately not registered as a tool?
+   A. A tool that does not exist cannot be abused through prompt injection; writes need human approval  B. Delete calls are too slow for an agent  C. The API forbids tools that delete data  D. Function tools cannot change data
 5. In `PromptAgentDefinition(model=...)` what must the value be?
+   A. The deployment name  B. The project name  C. The base model name  D. The agent name
 6. You call `create_version` with the same `agent_name` after editing the instructions. What happens?
+   A. The old version is overwritten and lost  B. The call fails because the name exists  C. A separate new agent is created  D. The next version of the same agent is created
 7. Why does `chat()` stop after at most 5 tool rounds?
+   A. The API allows five tool rounds at most  B. The model forgets earlier rounds after five  C. It bounds a runaway tool loop, which costs tokens  D. It makes the answer more accurate
 
-Send your answers and I will mark them.
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 

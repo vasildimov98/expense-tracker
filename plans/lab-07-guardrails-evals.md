@@ -217,16 +217,26 @@ Adjust field names to what your probe printed (the shape of `incomplete_details`
 
 ## 5. Self-check (exam style)
 
-1. Your app must stop users from overriding system instructions. Which Prompt Shields setting? A. Indirect attack B. Jailbreak (user prompt attack) C. Protected material D. Groundedness detection
-2. A retrieved web page tells the agent to email the user's data to a stranger. Which protection targets this and where is it applied?
-3. Why spotlighting if Prompt Shields already exist?
-4. A chat completion returns with `finish_reason: content_filter` and truncated text. Which is the correct handling? A. Retry until it passes B. Show a safe fallback message and log category/severity C. Show the raw filter reason to the user D. Disable the filter
-5. Your RAG answer states a figure that is not in the retrieved text. Which evaluator catches it? What would you fix first (Lab 3 lesson)?
-6. Why is it a problem to evaluate with the same model that produced the answers?
-7. Annotate vs block: when would you ship annotate-only?
-8. You changed the system prompt. Name two checks you run before shipping and what each protects against.
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
 
-Send answers and I will mark them.
+1. Your app must stop users from overriding system instructions. Which Prompt Shields setting?
+   A. Indirect attack  B. Jailbreak (user prompt attack)  C. Protected material  D. Groundedness detection
+2. A retrieved web page tells the agent to email the user's data to a stranger. Which protection targets this?
+   A. The jailbreak shield on the user prompt  B. Groundedness detection on the answer  C. The indirect-attack shield, applied to retrieved documents and tool results  D. Protected-material detection on the output
+3. Why use spotlighting if Prompt Shields already exist?
+   A. The API requires it  B. It replaces Prompt Shields  C. Shields are classifiers that can miss; spotlighting marks which text is data, as a second layer  D. It reduces token cost
+4. A chat completion returns with `finish_reason: content_filter` and truncated text. Which is the correct handling?
+   A. Retry until it passes  B. Show a safe fallback message and log category/severity  C. Show the raw filter reason to the user  D. Disable the filter
+5. Your RAG answer states a figure that is not in the retrieved text. Which evaluator catches it?
+   A. Fluency  B. Groundedness  C. Tool-call accuracy  D. Coherence
+6. Why is it a problem to evaluate with the same model that produced the answers?
+   A. It doubles the token price  B. The API refuses to evaluate a model with itself  C. It makes the dataset smaller  D. A model tends to favour its own answers, so the scores are biased
+7. When would you ship a shield as annotate-only?
+   A. Only for the jailbreak shield  B. In a test environment first, to collect tuning data without breaking users  C. Never; annotate-only is not available  D. In production, permanently
+8. You changed the system prompt. Which two checks run before shipping? Choose two.
+   A. Re-run the evaluation set and compare with the baseline  B. Delete the conversation history  C. Re-run the red-team probes  D. Raise the deployment capacity
+
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 

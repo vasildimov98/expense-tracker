@@ -234,6 +234,8 @@ Foundry portal -> Monitor (or the resource's Metrics in Azure portal): request c
 
 ## 5. Self-check (exam style)
 
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
+
 1. Your app categorizes 50,000 expenses a day and answers about 20 advisory questions a day. Which routing minimizes cost without losing quality on the hard task?
    A. `gpt-4o` for both  B. `gpt-4.1-mini` for both  C. mini for categorization, `gpt-4o` for advice  D. `gpt-4o` for categorization, mini for advice
 2. In `responses.create(model=...)`, what must the value be?
@@ -241,9 +243,13 @@ Foundry portal -> Monitor (or the resource's Metrics in Azure portal): request c
 3. A teammate wants to swap the advisor to a newer model next month. With the router from this lab, what changes?
    A. Every call site  B. The `.env` value and the deployment  C. `foundry_client.py` only  D. The Category enum
 4. Why does the eval set include ambiguous rows?
-5. Quota errors (429) appear at capacity 10. Which is the correct reading of that number?
+   A. The Responses API rejects evaluation sets without them  B. They make the evaluation run faster  C. Clear rows make every model look perfect, so only the ambiguous rows show which model is better  D. They lower the cost of each evaluation request
+5. What does a `429` at capacity 10 tell you?
+   A. The deployment was deleted  B. The daily budget of 10 dollars is spent  C. The 10K tokens-per-minute cap was exceeded  D. Ten users are connected at once
+6. A `429` appears at capacity 10. Which actions address it? Choose two.
+   A. Disable the content filter  B. Retry with backoff  C. Raise capacity, if quota allows  D. Lower the temperature
 
-(Answers at the end of your attempt: send them and I will mark them.)
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 

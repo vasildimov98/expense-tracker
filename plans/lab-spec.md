@@ -233,13 +233,61 @@ Full table with rejected alternatives and change triggers: `plans/lab-05-deliver
 - A successful what-if against an already deployed template shows only noise, which is the proof that template and environment agree.
 - `workflow_dispatch` ("Run workflow") only appears once the workflow file is on the default branch, so commit and push first.
 
+### Lab 6: Ops (quotas, cost, monitoring, identity, networking)
+
+Full table with rejected alternatives and change triggers: `plans/lab-06-ops.md`. What was built and measured:
+
+**D57. Retry on 429 and timeouts with exponential backoff and full jitter, honour `Retry-After`.** `app/ai/resilience.py`: 4 attempts per deployment, base 1 s, cap 20 s, total budget 45 s; client timeout 30 s with no SDK retries (`max_retries=0`) so one layer owns retrying. Verified: raw burst of 120 calls gave 113 x 429; with retry and failover 30/30 succeeded. Offline tests with a fake clock (8 tests) and a mutation check.
+
+**D58. Fail over to a second deployment after retries are exhausted.** `FOUNDRY_FALLBACK_<TASK>` env vars. Quota is per deployment, so a second deployment is a second pool of capacity; a retry alone cannot create capacity. The advisor agent path still has no retry or failover (open).
+
+**D59. Capacity stays at 10; bursts are absorbed in code.** Capacity is the spend-speed brake (D6).
+
+**D60. Usage and cost logged per call in our own code** (`app/ai/usage.py`, JSON lines: task, deployment, tokens, latency, cost). Validated against the Azure Monitor metrics and the Foundry Traces page. Prices by model-name prefix.
+
+**D61. Daily token cap enforced before each call** (200,000 tokens, in memory, resets on restart). It bounds total spend only for calls that go through our code; capacity bounds speed, `max_output_tokens` bounds one response, the retry cap bounds retry amplification. None of them is a budget.
+
+**D62. OpenTelemetry to Application Insights (workspace-based).** `app/ai/telemetry.py`: `configure_azure_monitor(logger_name=..., sampling_ratio=1.0)` plus the Foundry SDK instrumentor. Connection string read from the project connection, not copied into `.env`. Workspace, Application Insights and the project connection are now in `infra/main.bicep` behind `deployMonitoring` (compiled; `what-if` not run against `rg-expense-ai`).
+
+**D63. Prompt and response content is not recorded in traces** (`enable_content_recording=False`). Expense data is personal data. Verification that no content appears in `customDimensions` was requested, not confirmed.
+
+**D64. Index health = live document count against the source + golden queries (hit@5).** `lab06_index_health.py`, golden cases matched by description because ids are record hashes (D29). Verified: PASS, and a deliberate delete gave a count FAIL. Count uses `get_document_count()`; `get_index_statistics` lags minutes.
+
+**D65. Keyless enforced, not only practised, plus a user-assigned runtime identity.** `disableLocalAuth` was `null` on the live Foundry resource and `false` (`aadOrApiKey`) on Search: the hand-made resources had drifted from the Bicep. Fixed both live and in `main.bicep` (Search rejects `authOptions` together with `disableLocalAuth`). `id-expense-advisor-app` holds exactly two roles: Foundry User on the project and Search Index Data Reader on the service (in `rebuild.sh`, human-run).
+
+**D66. Roles at the narrowest scope.** Removed from the developer account: the redundant Search Index Data Reader, the subscription-wide Foundry User and the leftover role on an unused portal-created group. Left open: Owner at the subscription (acceptable on a personal trial, first thing to narrow in a work account). The project-scoped runtime role was not tested end to end (no host).
+
+**D67. Private endpoint and public access disabled, proved in a throwaway group.** `infra/network-test.bicep`: account, VNet and subnet, private endpoint, three `privatelink` DNS zones with VNet links, zone group. Verified: with the endpoint present, `nslookup` showed the `privatelink` CNAME but still a public IP from outside the VNet; with public access disabled the same call that returned a model list returned `403 Public access is disabled. Please configure private endpoint.` Group deleted and account purged.
+
+### Lessons from the Lab 6 run
+- A retry cannot create capacity: it only waits for a window. Failover to a second deployment adds capacity. Patience is capped by attempts before it is capped by the time budget (about 7 s per deployment here), so predict from the binding limit.
+- Timeouts are a second failure mode: the service may queue instead of answering 429, and a timed-out request can still complete and bill server-side. Set a client timeout and retry it.
+- Azure Monitor's default sampler is rate-limited (5 traces per second); in a tight loop it drops spans and the Foundry SDK instrumentor then crashes on a non-recording span. Use `sampling_ratio=1.0` while volume is small.
+- App Insights Logs uses classic table names (`traces`, `dependencies`, `requests`; `timestamp`, `message`, `customDimensions`); the Log Analytics workspace uses `AppTraces`, `AppDependencies`. The KQL editor runs only the query at the cursor.
+- Metrics splitting needs one metric per chart. Azure OpenAI Requests and Processed Inference Tokens split by `ModelDeploymentName` or `StatusCode`.
+- Alert "Threshold Sensitivity" (dynamic thresholds: High = tighter band, more alerts) is not the content-filter severity threshold (Low = strictest). Opposite directions, classic exam trap.
+- Hierarchy: subscription, resource group, Foundry resource (deployments, keys, roles, networking), Foundry projects (agents, files, connections). The portal form creates a new resource; the API or Bicep creates a child project.
+- After creating and deleting a second project the agent's Entra identity was disabled (cause unproven); the Enable button did nothing; deleting and recreating the agent from code fixed it.
+- The `expenses` search index vanished unexpectedly (found by the agent answering "data issue"); `lab03_build_index` restored it. This is the case the health check exists for.
+- `get_index_statistics` and the portal document count lag minutes behind uploads and deletes; "Uploaded N/N" only means accepted. Use a live count query.
+- Usage log lines are written after the span ends, so they carry no trace id (matters for Lab 8).
+- `DefaultAzureCredential` tries the managed-identity endpoint first on a laptop (504 noise in dependencies).
+- `az` prints nothing for a `null` property and for a successful delete; `az resource update` prints the whole resource.
+- A user-assigned managed identity is a standalone resource with its own lifecycle; attach it to the host that runs the code, not to the Foundry project. The CLI role listing shows its `clientId`, while `principalId` is what role assignments use.
+- Role propagation can take minutes and shows as `Principal does not have access to API/Operation`; the real network denial is `403 Public access is disabled`. Do not read a generic permission error as a network block.
+- Each Azure resource type has its own API version list: `privateDnsZones@2024-05-01` has no types, `@2024-06-01` does; `privateDnsZoneGroups` follows the `Microsoft.Network` versions. Bicep `parent:` needs a resource reference, not `.name`, and looped children are indexed by position, not by value.
+- The `privatelink.*` DNS zone names are dictated by the CNAME Azure inserts once a private endpoint exists, not a free naming convention; one missing or unlinked zone means the app silently keeps using the public IP.
+- Private endpoints close only the data plane; ARM and the portal still work, so developers keep deploying but need VPN, ExpressRoute, zero-trust access, a jump host or an in-VNet runner to call the data plane.
+- DNS broke at home but not at the office with no Azure change: the long CNAME chain failed on the router's resolver; `1.1.1.1` worked.
+- Self-check misses: why the `privatelink` DNS zone, not disabling public access, fixes a public IP (missed twice); which cost controls bound what (rate versus total versus one call); jitter prevents synchronized retries; data-layer checks are count parity, golden queries and freshness.
+
 ## 4. Lab format (every lab must follow this)
 
 1. **Spec first:** goal, requirements, constraints, and a decision table (each choice with *why* and the alternative rejected).
 2. **Prerequisites** and **cost/resource warning** (what bills, estimate, cleanup, guardrails).
 3. **Hybrid tasks**, each with Objective, Why this approach, Steps (UI/portal and CLI/code), Code with explanations, Expected output, Common errors.
 4. **Verification** in the UI.
-5. **Self-check** (exam style) and a **decision recap** at the end.
+5. **Self-check** in exam format: multiple choice, exactly one correct answer, or "Choose two." when two are correct (never three), letters only. And a **decision recap** at the end.
 6. Update this file: decision log entries and lessons.
 
 ## 5. Status
@@ -251,10 +299,10 @@ Full table with rejected alternatives and change triggers: `plans/lab-05-deliver
 | 3 Grounding (AI Search) | Done 2026-11-03, see `plans/lab-03-grounding.md`; self-check 4.5/6 (missed: least-privilege role is Index Data Reader; aggregation belongs in code, not the LLM) |
 | 4 Advisor agent | Done 2026-11-03, see `plans/lab-04-advisor-agent.md`; self-check 7/7, all tasks run (chat, tool calls, memory); Task 6 answered |
 | 5 Delivery (IaC, CI/CD) | Done 2026-11-04, see `plans/lab-05-delivery.md`; D43-D56 logged; self-check 5/7 (partial: why the test env vars are safe, why the pipeline cannot create roles, soft-delete purge, why the credential is bound to an environment). Verified: 8 tests + mutation, Bicep deployed to `rg-expense-ai-test`, CI green, OIDC deploy green behind approval. Unverified: `rebuild.sh` with `work.bicepparam` in a new subscription. Cleanup pending |
-| 6 Ops (quotas, cost, monitoring, managed identity, networking) | Theory done (Section 3). Plan written 2026-11-09: `plans/lab-06-ops.md`, D57-D67 proposed. Not started |
+| 6 Ops (quotas, cost, monitoring, managed identity, networking) | Done 2026-11-12, see `plans/lab-06-ops.md`; D57-D67 logged; all six tasks run (commits a3708be, 195180a, 58b3dc2, 0f9327a, cb36ffb, c9bf68c). Self-check 4.5/8 as open questions, then 2.5/4 in exam format (missed: private DNS zone twice, which cost controls bound what, jitter reason). 30 offline tests. Unverified: `what-if` of the monitoring resources in `main.bicep` against `rg-expense-ai`; D63 content check; the TooManyRequest alert rule and action group still exist |
 | 7 Guardrails and evaluation (content filters, Prompt Shields, evaluators, red teaming) | Theory done (Section 4). Plan written 2026-11-09: `plans/lab-07-guardrails-evals.md`, D68-D77 proposed. Not started |
 | 8 Audit and governance (traces, provenance, approvals, tool access) | Plan written 2026-11-09: `plans/lab-08-audit-governance.md`, D78-D88 proposed. Not started |
 
 Theory source: Udemy "Microsoft AI-103: Azure AI Apps and Agents Developer Course". Workflow: finish a course section, then do its labs here.
 - Section 2 (Choose Services and Set Up Foundry): theory covered 2026-11-02, maps to Labs 1-5. Section 2 quiz: not logged yet.
-- Section 3 (Manage, Monitor, and Secure): not started, maps to Lab 6 and part of 7. Quotas/429s, cost, monitoring, keyless/managed identity, private networking.
+- Section 3 (Manage, Monitor, and Secure): theory covered, Lab 6 done 2026-11-12 (part of Lab 7 still to do). Quotas/429s, cost, monitoring, keyless/managed identity, private networking.

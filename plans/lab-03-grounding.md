@@ -338,6 +338,8 @@ Portal -> search service -> Search management -> Indexes -> `expenses` -> Search
 
 ## 5. Self-check (exam style)
 
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
+
 1. You embed documents with `text-embedding-3-small`. A teammate embeds *queries* with `text-embedding-3-large`. What happens?
    A. Better accuracy  B. Retrieval silently degrades or fails: the vectors are not comparable and dimensions differ  C. Search converts them automatically  D. Nothing, vectors are universal
 2. Which retrieval mode finds "latte" when the user asks about "coffee", AND still ranks an exact "Lidl" match first?
@@ -345,10 +347,13 @@ Portal -> search service -> Search management -> Indexes -> `expenses` -> Search
 3. The app only needs to *query* the index. Which role follows least privilege?
    A. Owner  B. Search Service Contributor  C. Search Index Data Contributor  D. Search Index Data Reader
 4. Why does the build script use deterministic ids and `merge_or_upload_documents`?
-5. A grounded answer gives a wrong monthly total even though all the records are in the index. What is the likely cause, and what is the right fix?
-6. In `embeddings.create(model=...)` what must the value be?
+   A. It encrypts the documents at rest  B. Search requires hash-shaped ids  C. Re-running the build updates the same documents instead of duplicating them  D. It makes queries faster
+5. A grounded answer gives a wrong monthly total even though all the records are in the index. What is the likely cause and the right fix?
+   A. The index is corrupted; rebuild it  B. The embedding model is too small; switch to `-large`  C. The temperature is too high; lower it  D. Top-k retrieval returned only some records and the model added them up; compute totals in code or a tool
+6. In `embeddings.create(model=...)`, what must the value be?
+   A. The base model name  B. The resource group name  C. The search index name  D. The embedding deployment name
 
-Send your answers and I will mark them.
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 

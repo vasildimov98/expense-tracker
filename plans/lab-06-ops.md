@@ -390,16 +390,26 @@ az role assignment create --assignee-object-id $PRINCIPAL --assignee-principal-t
 
 ## 5. Self-check (exam style)
 
-1. A launch-day burst returns `429` for 8% of requests. Which action should come first? A. Raise `max_output_tokens` B. Retry with exponential backoff and jitter C. Switch the model to a larger one D. Disable the content filter
-2. Why does adding jitter to the backoff matter?
-3. Your quota for a model in a region is exhausted by one deployment. Name two ways to get more capacity or throughput without a code change to the app.
-4. A cost alert is not available on your subscription. Name two controls that still bound cost, and what each one does NOT bound.
-5. The app suddenly answers worse after nobody changed code. Which three data-layer checks do you run before blaming the model?
-6. Why a user-assigned rather than system-assigned managed identity for the app? When would system-assigned be better?
-7. After creating a private endpoint, the app still resolves the public IP of the account. What is missing?
-8. You disabled public network access and your Foundry **agents** still fail while plain model calls from inside the VNet work. Why?
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
 
-Send answers and I will mark them.
+1. A launch-day burst returns `429` for 8% of requests. Which action should come first?
+   A. Raise `max_output_tokens`  B. Retry with exponential backoff and jitter  C. Switch the model to a larger one  D. Disable the content filter
+2. Why does adding jitter to the backoff matter?
+   A. It spreads the retries so clients that failed together do not all retry at the same moment  B. It removes the requests-per-minute limit  C. It makes every wait longer  D. It guarantees the retry succeeds
+3. Your quota for a model in a region is exhausted by one deployment. Which two actions add capacity without a code change in the app? Choose two.
+   A. Raise `max_output_tokens`  B. Add a provisioned-throughput (PTU) deployment  C. Lower the temperature  D. Request a quota increase
+4. A cost alert is not available on your subscription. Which two statements about the remaining controls are true? Choose two.
+   A. A daily token cap in your code bounds the total only for calls that go through that code  B. A tokens-per-minute capacity cap limits how fast you spend, not the total  C. `max_output_tokens` bounds the number of requests per day  D. A retry cap bounds how many users can call the app
+5. The app suddenly answers worse and nobody changed code. Which two data-layer checks come first? Choose two.
+   A. Switch to a larger model  B. Run a set of golden queries against the index  C. Compare the index document count with the source  D. Rewrite the system instructions
+6. Why a user-assigned rather than a system-assigned managed identity for the app?
+   A. User-assigned identities need no role assignments  B. It has its own lifecycle: it can be granted roles before the host exists and moved between hosts  C. System-assigned identities bill hourly  D. System-assigned identities cannot hold roles
+7. After creating a private endpoint, the app still resolves the public IP of the account. What is missing?
+   A. The subnet is too small  B. The account has no model deployments  C. Public network access is still enabled  D. A private DNS zone linked to the virtual network
+8. You disabled public network access. Plain model calls from inside the VNet work but Foundry agents fail. Why?
+   A. Agents need a public IP address  B. The agent runtime needs network injection into a delegated subnet; a private endpoint alone does not cover it  C. Agents need API keys, which are disabled  D. Agents cannot use private endpoints at all
+
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 

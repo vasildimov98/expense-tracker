@@ -212,16 +212,26 @@ Optional: ship the same events to Log Analytics (custom log / `AppTraces` JSON) 
 
 ## 5. Self-check (exam style)
 
-1. An agent can delete customer records. Which control gives a human final say? A. A stricter system prompt B. An approval workflow before execution C. A larger context window D. A lower temperature
-2. Why must the proposal digest be part of the approval?
-3. Name two reasons the model must not hold the `approve` capability, even for "trusted" users.
-4. You removed a tool from the list shown to the model. Is the tool now unavailable? Explain, and say where the real enforcement belongs.
-5. Distinguish human-in-the-loop from human-on-the-loop and give an example of each in this system.
-6. What does provenance metadata let you do after a wrong answer? Name three fields.
-7. Why should audit logs be written to a store the application cannot edit?
-8. A third-party MCP server adds a new tool overnight. Which two settings protect you?
+Each question is multiple choice. A question says "Choose two." when two answers are correct; otherwise exactly one is correct. Send your letters only and I will mark them.
 
-Send answers and I will mark them.
+1. An agent can delete customer records. Which control gives a human final say?
+   A. A stricter system prompt  B. An approval workflow before execution  C. A larger context window  D. A lower temperature
+2. Why must the proposal digest be part of the approval?
+   A. It binds the approval to the exact proposal, so an edited or replayed proposal cannot execute  B. It makes approval faster  C. Entra ID requires a digest for approvals  D. It encrypts the proposal
+3. Why must the model not hold the `approve` capability, even for trusted users? Choose two.
+   A. Models cannot call tools at all  B. Approval calls are too slow for models  C. Injected text could make it approve its own proposals  D. Approval must be an authenticated, recorded act by a human
+4. You removed a tool from the list shown to the model. Is the tool now unavailable?
+   A. Yes, the model can no longer call it  B. Yes, if the temperature is low  C. Yes, but only until the agent restarts  D. No. The model can still emit the call; enforce access at execution time in code
+5. Which statement distinguishes human-in-the-loop from human-on-the-loop?
+   A. In-the-loop reviews logs afterwards. On-the-loop approves before the action  B. They are two names for the same control  C. In-the-loop applies only to reads, on-the-loop only to writes  D. In-the-loop: a human approves before the action. On-the-loop: a human monitors and reviews afterwards
+6. After a wrong answer, what does provenance metadata let you do? Choose two.
+   A. See which model version and instructions version produced it  B. See which records the agent read  C. Delete the personal data automatically  D. Re-run the answer with identical output every time
+7. Where should audit logs be written?
+   A. The same database the application edits  B. The agent's conversation memory  C. The browser's local storage  D. A store the application cannot edit, append-only and tamper-evident
+8. A third-party MCP server adds a new tool overnight. Which two settings protect you? Choose two.
+   A. Require approval for tool calls  B. A lower temperature  C. A larger context window  D. Allow only listed tool names
+
+Send your letters and I will mark them.
 
 ## 6. Decision recap
 
