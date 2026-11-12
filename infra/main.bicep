@@ -99,7 +99,7 @@ resource appInsightsConnection 'Microsoft.CognitiveServices/accounts/projects/co
     category: 'AppInsights'
     target: appInsights.id
     authType: 'ApiKey'
-    isSharedToAll: true
+    isSharedToAll: false    // what-if showed the service keeps false even though the hand-made PUT sent true; match reality
     credentials: { key: appInsights!.properties.ConnectionString }   // same condition as this resource
     metadata: { ApiType: 'Azure', ResourceId: appInsights.id }
   }
