@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Rebuild the Expense Advisor Azure environment (Labs 1-4) in the CURRENTLY LOGGED-IN subscription.
-# Decisions behind every value: plans/lab-spec.md (D1-D55).
+# Rebuild the Expense Advisor Azure environment (Labs 1-6) in the CURRENTLY LOGGED-IN subscription.
+# Decisions behind every value: plans/lab-spec.md (D1-D67).
 #
-# Infrastructure (Foundry resource, project, model deployments, Search) comes from the reviewed
-# Bicep template infra/main.bicep (Lab 5, D43-D44). This script only does what is NOT
+# Infrastructure (Foundry resource, project, model deployments, Search, and with deployMonitoring=true
+# the Log Analytics workspace, Application Insights and the project's appinsights connection) comes from
+# the reviewed Bicep template infra/main.bicep (Lab 5, D43-D44; monitoring Lab 6, D62). This script only does what is NOT
 # infrastructure-as-code: provider registration, the resource group, the role assignments
 # (human-run on purpose, D48) and printing the .env values.
 #
@@ -69,7 +70,8 @@ SEARCH_ENDPOINT=$(az deployment group show -g "$RG" -n rebuild --query propertie
 say "Role assignments (propagation takes 1-2 min; a 403 right after is normal)"
 ACCOUNT_ID="/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCOUNT"
 SEARCH_ID=$(az search service show -n "$SEARCH_NAME" -g "$RG" --query id -o tsv)
-for role in "Search Service Contributor" "Search Index Data Contributor" "Search Index Data Reader"; do
+# Index Data Reader is not needed for you: Index Data Contributor already includes it (Lab 6 role audit).
+for role in "Search Service Contributor" "Search Index Data Contributor"; do
   az role assignment create --assignee "$ME" --role "$role" --scope "$SEARCH_ID" -o none
 done
 # The role was renamed from "Azure AI User" to "Foundry User"; accept either name.
@@ -108,4 +110,6 @@ Next (Python, from the project root, venv active; wait ~2 min for roles first):
   python -m app.ai.labs.lab03_build_index         # recreates the index + 21 documents
   python -m app.ai.labs.lab04_chat                # creates the advisor agent, then chats
   python -m app.ai.labs.lab04_memory              # memory store + memory agent
+  python -m app.ai.labs.lab06_index_health        # count parity + golden queries (expects PASS)
+  python -m app.ai.labs.lab06_telemetry_run       # sends traces to Application Insights (wait 2-5 min)
 EOF

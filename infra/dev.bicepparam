@@ -3,6 +3,7 @@ using 'main.bicep'
 param accountName = 'expense-advisor-resource'
 param location = 'swedencentral'
 param deploySearch = true
+param deployMonitoring = true
 param searchName = 'srch-expense-advisor-vd91'
 param searchLocation = 'northeurope'
 param deployments = [

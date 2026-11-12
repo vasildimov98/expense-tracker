@@ -2,9 +2,12 @@ name: deploy-test
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["infra/**"]
+  # Disabled: rg-expense-ai-test is deleted between labs (the pipeline identity loses its
+  # Contributor role with it), so a push would fail at login. Re-enable after rebuilding
+  # the test environment and re-granting the role (D48, human-run).
+  # push:
+  #   branches: [main]
+  #   paths: ["infra/**"]
 
 permissions:
   id-token: write      # lets the job request an OIDC token

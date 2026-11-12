@@ -12,6 +12,7 @@ using 'main.bicep'
 param accountName = readEnvironmentVariable('ACCOUNT')
 param location = readEnvironmentVariable('LOCATION', 'swedencentral')
 param deploySearch = true
+param deployMonitoring = true
 param searchName = readEnvironmentVariable('SEARCH_NAME')
 param searchLocation = readEnvironmentVariable('SEARCH_LOCATION', 'northeurope')
 param deployments = [
