@@ -58,3 +58,27 @@ def test_ask_refuses_before_calling_the_model_when_cap_is_spent(monkeypatch):
     with pytest.raises(usage.DailyCapExceeded):
         model_router.ask("categorize", "i", "x", 20)
     assert called == []      # no client was even built: nothing was spent
+
+
+def test_ask_safe_turns_a_filter_block_into_a_result_without_retrying(monkeypatch):
+    import httpx2 as httpx
+    import openai
+    from app.ai.safety import Outcome
+
+    monkeypatch.setenv("FOUNDRY_MODEL_DEPLOYMENT", "primary")
+    monkeypatch.delenv("FOUNDRY_FALLBACK_CATEGORIZE", raising=False)
+    calls = []
+
+    class FakeResponses:
+        def create(self, model, **kwargs):
+            calls.append(model)
+            response = httpx.Response(400, request=httpx.Request("POST", "https://example.test"))
+            raise openai.BadRequestError("x", response=response, body={"code": "content_filter"})
+
+    class FakeClient:
+        responses = FakeResponses()
+
+    monkeypatch.setattr(model_router, "_client", lambda: FakeClient())
+    result = model_router.ask_safe("categorize", "i", "x", 20)
+    assert result.outcome is Outcome.PROMPT_BLOCKED
+    assert calls == ["primary"]      # a blocked prompt is not retried

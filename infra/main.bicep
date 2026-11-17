@@ -43,6 +43,46 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   }
 }
 
+// ---- Lab 7 guardrails (D68-D71): the content filter policy is code, not the implicit default ----
+var harmCategories = [
+  { name: 'Hate', threshold: 'Medium' }
+  { name: 'Sexual', threshold: 'Medium' }
+  { name: 'Violence', threshold: 'Medium' }
+  { name: 'Selfharm', threshold: 'Low' }      // D69: tightened, no legitimate need in this domain
+]
+var sources = [ 'Prompt', 'Completion' ]
+
+resource policy 'Microsoft.CognitiveServices/accounts/raiPolicies@2025-06-01' = {
+  parent: account
+  dependsOn: [
+    project    // serialize account writes: the first deploy hit RequestConflict when policy and project ran in parallel
+  ]
+  name: 'expense-advisor-policy'
+  properties: {
+    basePolicyName: 'Microsoft.DefaultV2'
+    mode: 'Blocking'
+    contentFilters: concat(
+      flatten(map(harmCategories, c => map(sources, s => {
+        name: c.name
+        severityThreshold: c.threshold
+        blocking: true
+        enabled: true
+        source: s
+      }))),
+      [
+        // D70: two different attack paths, two shields. Both run on the prompt side
+        // (retrieved documents and tool results reach the model inside the prompt).
+        { name: 'Jailbreak', blocking: true, enabled: true, source: 'Prompt' }
+        { name: 'Indirect Attack', blocking: true, enabled: true, source: 'Prompt' }
+        // basePolicyName did not carry the default's protected-material filters over, so state them (D68: nothing implicit).
+        // Same actions as the default: text blocks, code annotates (the advisor never writes code).
+        { name: 'Protected Material Text', blocking: true, enabled: true, source: 'Completion' }
+        { name: 'Protected Material Code', blocking: false, enabled: true, source: 'Completion' }
+      ]
+    )
+  }
+}
+
 @batchSize(1)
 resource modelDeployments 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = [for d in deployments: {
   parent: account
@@ -54,7 +94,9 @@ resource modelDeployments 'Microsoft.CognitiveServices/accounts/deployments@2025
    properties: {
     model: { format: 'OpenAI', name: d.model, version: d.version }
     versionUpgradeOption: 'NoAutoUpgrade'   // D7 made real: no silent model changes
-    raiPolicyName: 'Microsoft.DefaultV2'    // the content filter policy, now explicit (Lab 7 changes it)
+    // Chat models get the custom policy (D68); embeddings do not generate text, so they keep the default.
+    // Referencing policy.name also makes Bicep create the policy first.
+    raiPolicyName: startsWith(d.model, 'text-embedding') ? 'Microsoft.DefaultV2' : policy.name
   }
 }]
 

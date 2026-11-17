@@ -12,6 +12,7 @@ for question in [
     "And what about transport?",          # needs memory of the previous turn
     "Which single expense was the largest?",
     "How much did I spend in Japan?",
+    "What did I spend at Corner Cafe Lumen?"
 ]:
     response = chat(question, previous)
     previous = response.id

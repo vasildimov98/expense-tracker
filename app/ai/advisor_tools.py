@@ -66,6 +66,25 @@ TOOLS = [
 ]
 
 
+def spotlight(text: str) -> str:
+    """Mark retrieved text as data (Lab 7, D70/D72). Mode comes from the SPOTLIGHT env var, read per call:
+
+    none (default): untrusted text goes in as-is; the indirect-attack shield cannot tell it is a document.
+    mark: wrap in triple quotes, the delimiter Prompt Shields uses to recognise documents.
+    full: mark + <<DATA>> tags the instructions refer to (the model-side layer).
+    """
+    mode = os.environ.get("SPOTLIGHT", "none")
+    if mode == "mark":
+        return f'"""{text}"""'
+    if mode == "full":
+        return f'<<DATA>>"""{text}"""<</DATA>>'
+    return text
+
+
+# Only tools that return text from the data store are untrusted. Local computed totals are not.
+UNTRUSTED_TOOLS = {"search_expenses"}
+
+
 def run_tool(name: str, arguments: str) -> str:
     # Errors go back to the model as data so it can recover or explain,
     # instead of crashing the conversation.
@@ -73,4 +92,5 @@ def run_tool(name: str, arguments: str) -> str:
         result = IMPLEMENTATIONS[name](**json.loads(arguments))
     except Exception as err:
         result = {"error": f"{type(err).__name__}: {err}"}
-    return json.dumps(result)
+    output = json.dumps(result)
+    return spotlight(output) if name in UNTRUSTED_TOOLS else output

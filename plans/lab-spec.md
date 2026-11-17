@@ -283,6 +283,38 @@ Full table with rejected alternatives and change triggers: `plans/lab-06-ops.md`
 - A hand-made PUT is not proof of state: the connection was sent `isSharedToAll: true` and reads back `false`. Read back what the service reports before copying it into a template.
 - Self-check misses: why the `privatelink` DNS zone, not disabling public access, fixes a public IP (missed twice); which cost controls bound what (rate versus total versus one call); jitter prevents synchronized retries; data-layer checks are count parity, golden queries and freshness.
 
+### Lab 7: Guardrails and evaluation (as built, 2026-11-17)
+
+**D68. Custom RAI policy in Bicep (`expense-advisor-policy`, based on `Microsoft.DefaultV2`), attached to the chat deployments only.** Embeddings keep the default policy. The project must be written first (`dependsOn: [project]`) because the Cognitive Services account accepts one write at a time (`RequestConflict` otherwise). The base policy did not carry the Protected Material filters, so both are declared explicitly (text blocking, code annotate-only).
+
+**D69. Harm thresholds per category, self-harm strictest.** In the API `Low` is the strictest setting (the portal calls it "Highest blocking"); Block means the request fails, Annotate only reports.
+
+**D70. Jailbreak shield on the prompt, indirect-attack shield declared on the prompt source.** Measured result: the jailbreak shield caught the DAN persona and the role-play and override prompts, but not a weak "ignore your instructions" one (it is a classifier). The indirect-attack shield never fired in any placement (tool result, user message, with or without `"""`); cause unproven (the Responses API may not scan documents, or the classifier wants another format). Treat it as contributing nothing on this path until shown otherwise.
+
+**D71. Block in production, annotate to tune.** Probe cases for benign, jailbreak, persona and harmful prompts are in `lab07_probe.py`; a blocked prompt is not retried.
+
+**D72. Spotlighting, our own, on untrusted tool output only.** `search_expenses` output is wrapped `<<DATA>>"""..."""<</DATA>>` and the instructions say it is untrusted. The service's Spotlighting preview is chat-completions only; we use Responses. Three variants (unmarked, `"""`, full) on a poisoned index: the agent obeyed in none, so the effect of spotlighting is not separable from the model's own training (n=3). It is a second layer, not a proof. The layer to remove last is the read-only tool design (D37) plus approval (Lab 8).
+
+**D73-D74. `safety.interpret` returns a typed `SafeResult`; user text is generic, details go to the usage log.** A 400 `content_filter` can come from the completion side (`source_type`); other `BadRequestError`s re-raise. `ask_safe` and `chat_safe` wrap the router and the agent; a blocked turn keeps the previous response id.
+
+**D75. Fixed 15-row set, judge `gpt-4.1-mini`, not the advisor model.** Context is captured from the real tool outputs, ground truth is computed from the seed file. The judge is noisy: a rerun of identical text moved one row by 2 points. Compare only complete runs (a NaN is dropped from the mean, so an incomplete run averages different rows).
+
+**D76. Groundedness and relevance run; safety evaluators and tool-call accuracy not run.** Safety evaluators are service-hosted and need project and region details that were not verified. Attack rows do not suit quality evaluators (a correct refusal scores relevance 1).
+
+**D77. Red team: fallback script plus the managed Foundry run.** Fallback `lab07_redteam.py` (12 attacks, whole app): attack success rate **2/12**, both in prompt extraction (the French translation of the system prompt leaked; the tool names and parameters were listed). Jailbreaks 3/3 blocked by the shield; exfiltration, tool abuse and encoded attacks held by the model alone. Managed run: **0/114** for violence and self-harm (60 explicit refusals, some blocked by the filter), but the Sensitive data leakage category was configured and produced no results at all, so leakage is unmeasured there. The managed run cannot execute our local tools, so it tests the model, filter and instructions, not the app.
+
+### Lessons from the Lab 7 run
+- Removing the grounding sentence ("answer only from tool results") changed nothing measurable: 9 of 15 answers identical, the rest reworded, all three unanswerable questions still answered honestly. The instruction is cheap insurance, not a proven control. Test a control by removing it before claiming it.
+- Built-in groundedness missed an invented currency symbol (`€` in one run, `£` in another, none in the data) and scored the worse one higher. Quality scores of 4-5 do not mean faithful; check the text.
+- Neither the filter nor the shield covers prompt extraction or tool-schema disclosure; the plain request was refused, the same request as a translation worked. Assume the system prompt leaks and keep nothing sensitive in it.
+- Instructions are a steering layer, not a security boundary: the refusal of "ignore your instructions" cannot be credited to the prompt alone (model training confounds it).
+- A single obfuscation (Base64, reversed text) was handled by the model, not by the platform: one thin layer.
+- `azure-ai-evaluation` 1.18.12 on Python 3.14: the library validator type-checks `credential: Any` with `isinstance` and fails; pass the credential to the evaluator constructors, not the model config. openai 3.x uses `httpx2`. Evaluators run 10 workers, so a capacity-10 judge produces 429s and NaN rows.
+- The managed red team expands "5 seed queries" to 19 per technique, redacts the prompts in the results, and its wizard creates an evaluation definition that must be deleted separately from the run.
+- Default-policy view in the portal and the policy in Bicep differ until the Protected Material filters are added explicitly.
+- Scores: Groundedness, Relevance, Coherence and Fluency are 1-5 Likert scores, 5 best, default pass threshold 3. The safety evaluators (violence, self-harm, hate, sexual) are the opposite: 0-7 severity, lower is better.
+- Self-check 8/8 (exam format).
+
 ## 4. Lab format (every lab must follow this)
 
 1. **Spec first:** goal, requirements, constraints, and a decision table (each choice with *why* and the alternative rejected).
@@ -302,7 +334,7 @@ Full table with rejected alternatives and change triggers: `plans/lab-06-ops.md`
 | 4 Advisor agent | Done 2026-11-03, see `plans/lab-04-advisor-agent.md`; self-check 7/7, all tasks run (chat, tool calls, memory); Task 6 answered |
 | 5 Delivery (IaC, CI/CD) | Done 2026-11-04, see `plans/lab-05-delivery.md`; D43-D56 logged; self-check 5/7 (partial: why the test env vars are safe, why the pipeline cannot create roles, soft-delete purge, why the credential is bound to an environment). Verified: 8 tests + mutation, Bicep deployed to `rg-expense-ai-test`, CI green, OIDC deploy green behind approval. Unverified: `rebuild.sh` with `work.bicepparam` in a new subscription. Cleanup pending |
 | 6 Ops (quotas, cost, monitoring, managed identity, networking) | Done 2026-11-12, see `plans/lab-06-ops.md`; D57-D67 logged; all six tasks run (commits a3708be, 195180a, 58b3dc2, 0f9327a, cb36ffb, c9bf68c). Self-check 4.5/8 as open questions, then 2.5/4 in exam format (missed: private DNS zone twice, which cost controls bound what, jitter reason). 30 offline tests. `what-if` of `dev.bicepparam` against `rg-expense-ai` (2026-11-12): workspace and Application Insights unchanged; real drift found: live deployments use `OnceNewDefaultVersionAvailable` (auto-upgrade) while the template pins `NoAutoUpgrade` (D54), and the connection's `isSharedToAll` is false live. Fixed 2026-11-12: template deployed to `rg-expense-ai` (deployment `lab6-sync`), all three deployments now `NoAutoUpgrade`. The 429 alert rule is deleted; the only action group left is the automatic Application Insights Smart Detection one |
-| 7 Guardrails and evaluation (content filters, Prompt Shields, evaluators, red teaming) | Theory done (Section 4). Plan written 2026-11-09: `plans/lab-07-guardrails-evals.md`, D68-D77 proposed. Not started |
+| 7 Guardrails and evaluation (content filters, Prompt Shields, evaluators, red teaming) | Done 2026-11-17, see `plans/lab-07-guardrails-evals.md`; D68-D77 logged as built. Tasks 1-5 run (policy deployed, safe-chat, injection table, evaluation A/A2/B, red team 2/12 local and 0/114 managed). Self-check 8/8. Open items: Foundry evaluation logging and safety evaluators unverified; indirect-attack shield silent (cause unproven). `expenses-attack` index deleted (confirmed) |
 | 8 Audit and governance (traces, provenance, approvals, tool access) | Plan written 2026-11-09: `plans/lab-08-audit-governance.md`, D78-D88 proposed. Not started |
 
 Theory source: Udemy "Microsoft AI-103: Azure AI Apps and Agents Developer Course". Workflow: finish a course section, then do its labs here.

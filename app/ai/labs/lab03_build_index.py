@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 
 from azure.search.documents.indexes.models import (
@@ -46,9 +47,9 @@ index = SearchIndex(
 )
 get_index_client().create_or_update_index(index)  # safe to re-run
 
-expenses = json.loads(
-    (Path(__file__).parent / "lab03_seed_expenses.json").read_text()
-)
+# Lab 7: SEED_PATH lets the same script build the poisoned test index (with AZURE_SEARCH_INDEX set too).
+SEED_PATH = os.environ.get("SEED_PATH", str(Path(__file__).parent / "lab03_seed_expenses.json"))
+expenses = json.loads(Path(SEED_PATH).read_text())
 
 
 def to_text(e: dict) -> str:
@@ -80,4 +81,4 @@ docs = [
 ]
 
 result = get_search_client().merge_or_upload_documents(docs)
-print(f"Uploaded {sum(r.succeeded for r in result)}/{len(docs)} documents")
+print(f"Index {INDEX_NAME}: uploaded {sum(r.succeeded for r in result)}/{len(docs)} documents")

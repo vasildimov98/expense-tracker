@@ -1,0 +1,27 @@
+# Lab 7 evaluation extras. Separate from requirements-ai.txt so CI (which runs the offline tests) stays light (D49).
+-r requirements-ai.txt
+azure-ai-evaluation==1.18.12
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.5
+aiosignal==1.4.0
+attrs==26.1.0
+click==8.5.1
+cloudpickle==3.1.2
+defusedxml==0.7.1
+frozenlist==1.8.0
+httpcore==1.0.9
+httpx==0.28.1
+Jinja2==3.1.6
+joblib==1.6.0
+MarkupSafe==3.0.4
+multidict==7.2.1
+nltk==3.10.4
+numpy==2.5.5
+pandas==2.3.3
+propcache==0.5.4
+pytz==2026.6
+regex==2026.11.15
+ruamel.yaml==0.19.1
+tqdm==4.70.1
+tzdata==2026.6
+yarl==1.25.1

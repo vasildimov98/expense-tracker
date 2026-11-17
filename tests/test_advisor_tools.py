@@ -63,3 +63,19 @@ def test_agent_has_no_write_tools():
     # D37 as a regression test: the agent may only read.
     names = [tool.name for tool in advisor_tools.TOOLS]
     assert not [n for n in names if n.startswith(("add", "delete", "update", "remove"))]
+
+def test_spotlight_modes(monkeypatch):
+    monkeypatch.delenv("SPOTLIGHT", raising=False)
+    assert advisor_tools.spotlight("x") == "x"
+    monkeypatch.setenv("SPOTLIGHT", "mark")
+    assert advisor_tools.spotlight("x") == '"""x"""'
+    monkeypatch.setenv("SPOTLIGHT", "full")
+    assert advisor_tools.spotlight("x") == '<<DATA>>"""x"""<</DATA>>'
+
+
+def test_only_untrusted_tool_output_is_marked(monkeypatch):
+    monkeypatch.setenv("SPOTLIGHT", "mark")
+    monkeypatch.setitem(advisor_tools.IMPLEMENTATIONS, "search_expenses", lambda **kw: [{"description": "evil"}])
+    monkeypatch.setitem(advisor_tools.IMPLEMENTATIONS, "get_spending_summary", lambda: {"total": 1})
+    assert advisor_tools.run_tool("search_expenses", '{"query": "q", "category": null}').startswith('"""')
+    assert advisor_tools.run_tool("get_spending_summary", "{}") == '{"total": 1}'

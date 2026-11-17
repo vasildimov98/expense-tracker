@@ -79,6 +79,13 @@ def record_response(task: str, deployment: str, response, latency_s: float) -> d
     )
 
 
+def record_outcome(task: str, outcome: str, detail: dict) -> dict:
+    """One line per safety-relevant turn (Lab 7): outcome plus which categories fired, never text (D63)."""
+    entry = {"task": task, "outcome": outcome, "fired": detail.get("fired", {})}
+    log.info(json.dumps(entry))
+    return entry
+
+
 def enable_console(path: str | None = None) -> None:
     """For lab scripts: show our log lines (and optionally append to a file).
 

@@ -6,6 +6,7 @@ from functools import lru_cache
 from app.ai import usage
 from app.ai.foundry_client import get_openai_client
 from app.ai.resilience import call_with_retry
+from app.ai.safety import SafeResult, interpret
 
 # Task -> env var holding the deployment name. Config, not code (D19).
 _ROUTES = {
@@ -40,7 +41,7 @@ def fallbacks_for(task: str) -> list[str]:
     return [name.strip() for name in raw.split(",") if name.strip()]
 
 
-def ask(task: str, instructions: str, user_input: str, max_output_tokens: int) -> str:
+def _respond(task: str, instructions: str, user_input: str, max_output_tokens: int):
     usage.check_cap()   # fail closed BEFORE spending anything (D61)
 
     def call(deployment: str):
@@ -55,5 +56,18 @@ def ask(task: str, instructions: str, user_input: str, max_output_tokens: int) -
         usage.record_response(task, deployment, response, time.monotonic() - started)
         return response
 
-    response = call_with_retry(call, [deployment_for(task), *fallbacks_for(task)])
-    return response.output_text
+    return call_with_retry(call, [deployment_for(task), *fallbacks_for(task)])
+
+
+def ask(task: str, instructions: str, user_input: str, max_output_tokens: int) -> str:
+    return _respond(task, instructions, user_input, max_output_tokens).output_text
+
+
+def ask_safe(task: str, instructions: str, user_input: str, max_output_tokens: int) -> SafeResult:
+    """ask() that treats content-filter outcomes as results, not crashes (D73).
+
+    A blocked prompt is a 400, which call_with_retry does not retry: retrying it would be blocked again.
+    """
+    result = interpret(lambda: _respond(task, instructions, user_input, max_output_tokens))
+    usage.record_outcome(task, result.outcome.value, result.detail)
+    return result
