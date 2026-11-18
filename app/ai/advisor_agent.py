@@ -103,9 +103,10 @@ def _chat_rounds(text: str, previous_response_id: str | None, audit_ctx: dict):
         outputs = []
         for c in calls:
             result_text = run_tool(c.name, c.arguments)
-            # D81: keep the name, arguments and result SIZE, never the result text
+            # D81: keep the name, a HASH of the arguments (the model echoes the user's words into
+            # them) and the result SIZE, never the arguments or the result text
             audit_ctx["tool_calls"].append(
-                {"name": c.name, "args": c.arguments, "result_chars": len(result_text)})
+                {"name": c.name, "args_hash": audit.digest(c.arguments), "result_chars": len(result_text)})
             outputs.append({"type": "function_call_output", "call_id": c.call_id, "output": result_text})
         response = create(input=outputs, previous_response_id=response.id, **agent)
     raise RuntimeError(f"No final answer after {MAX_TOOL_ROUNDS} tool rounds")
@@ -138,6 +139,9 @@ def chat_safe(text: str, previous_response_id: str | None = None,
                 "agent_turn", actor,
                 outcome=outcome,
                 model=audit_ctx.get("model"),
+                # The response carries only "gpt-4o". The pinned version is configuration (D55),
+                # so a retired or upgraded model is a one-line change, not a code change.
+                model_version=os.environ.get("ADVISOR_MODEL_VERSION", "unknown"),
                 tool_calls=audit_ctx.get("tool_calls", []),
                 usage=audit_ctx.get("tokens"),
                 deployment=deployment_for("advise"),

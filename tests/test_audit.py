@@ -8,7 +8,7 @@ import pytest
 
 from app.ai import advisor_agent, advisor_tools, audit
 
-REQUIRED = {"trace_id", "id", "ts", "event", "actor", "outcome", "model", "tool_calls", "usage",
+REQUIRED = {"model_version", "trace_id", "id", "ts", "event", "actor", "outcome", "model", "tool_calls", "usage",
             "question_hash", "instructions_hash", "deployment", "policy", "retrieved_ids"}
 
 
@@ -88,6 +88,8 @@ def test_tool_calls_and_retrieved_ids_are_recorded_without_result_text(monkeypat
     assert record["retrieved_ids"] == ["abc"]
     [tool] = record["tool_calls"]
     assert tool["name"] == "search_expenses" and tool["result_chars"] > 0
+    assert tool["args_hash"] == audit.digest('{"query": "coffee", "category": null}')
+    assert "args" not in tool and "coffee" not in raw      # arguments are hashed too
     assert "PRIVATE-LATTE" not in raw      # D81: sizes and ids, never content
 
 
@@ -112,3 +114,11 @@ def test_trace_id_matches_the_turn_span(monkeypatch, _isolated_audit):
     advisor_agent.chat_safe("hi")
     [span] = exporter.get_finished_spans()
     assert _lines(_isolated_audit)[0]["trace_id"] == format(span.context.trace_id, "032x")
+
+
+def test_model_version_comes_from_config(monkeypatch, _isolated_audit):
+    monkeypatch.setenv("ADVISOR_MODEL_VERSION", "2024-11-20")
+    client = _fake_client(_response())
+    monkeypatch.setattr(advisor_agent, "_client", lambda: client)
+    advisor_agent.chat_safe("hi")
+    assert _lines(_isolated_audit)[0]["model_version"] == "2024-11-20"

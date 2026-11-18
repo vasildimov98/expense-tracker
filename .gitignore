@@ -229,3 +229,5 @@ usage.jsonl
 
 # Lab 8 audit trail
 audit.jsonl
+
+.vscode/settings.json
