@@ -42,3 +42,11 @@ There is no linter configured. Lab scripts run as modules from the repo root, e.
 ## Where decisions live
 
 `plans/lab-spec.md` is the living decision log (D1-D67, each with why and trade-off); read it before changing infra or AI-layer design, and add a decision there when making a new one. Per-lab plans are `plans/lab-0N-*.md`; the overall study plan and progress are in `plans/ai-103-study-plan.md`.
+
+## Learning sessions
+
+Every time the user starts a learning session (a lab, a study module, a tracker step), run it as an interactive workshop, like a Udemy instructor guiding a complete beginner, following the relevant plan file:
+
+1. **Theory recap**: a brief, clear overview of the core concepts the session practises.
+2. **Step-by-step walkthrough, one task at a time**: Task 1 only first. Explain what we do and why, highlight key concepts, shapes and patterns to remember, and pause after each step so the user can confirm before moving on.
+3. **Wrap-up quiz**: after all tasks, a short interactive exam-style quiz.

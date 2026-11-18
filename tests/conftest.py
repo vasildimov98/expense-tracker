@@ -10,3 +10,14 @@ for key, value in {
     "AZURE_SEARCH_INDEX": "expenses",
 }.items():
     os.environ.setdefault(key, value)
+
+# Audit records must never land in the real audit.jsonl during tests (Lab 8).
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _isolated_audit(tmp_path, monkeypatch):
+    from app.ai import audit
+    path = tmp_path / "audit.jsonl"
+    monkeypatch.setattr(audit, "AUDIT_PATH", path)
+    return path

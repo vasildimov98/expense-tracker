@@ -226,3 +226,6 @@ scratch.py
 
 # Lab 6 usage log (activity data)
 usage.jsonl
+
+# Lab 8 audit trail
+audit.jsonl

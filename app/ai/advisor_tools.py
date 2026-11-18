@@ -1,6 +1,7 @@
 """Tools the advisor agent can call. They run in OUR process, never in Azure."""
 import json
 import os
+from contextvars import ContextVar
 
 from azure.ai.projects.models import FunctionTool
 
@@ -10,6 +11,11 @@ from app.services.expense_service import ExpenseService
 from app.storage import JsonExpenseStorage
 
 EXPENSES_PATH = os.environ.get("EXPENSES_PATH", "expenses.json")
+
+
+# Audit side channel (D79): the caller sets a list, search_expenses appends the ids of the records
+# it read. The MODEL never sees ids (they cost tokens and mean nothing to it); the audit trail does.
+RETRIEVED_IDS: ContextVar[list | None] = ContextVar("retrieved_ids", default=None)
 
 
 def get_spending_summary() -> dict:
@@ -28,6 +34,9 @@ def search_expenses(query: str, category: str | None = None) -> list[dict]:
     # The model supplies the arguments, so validate them like any untrusted input.
     odata_filter = f"category eq '{Category(category).value}'" if category else None
     docs = retrieve(query, k=5, odata_filter=odata_filter)
+    seen = RETRIEVED_IDS.get()
+    if seen is not None:
+        seen.extend(d["id"] for d in docs if "id" in d)
     # Return only what the model needs: the raw result carries @search.* metadata
     # that costs input tokens on every turn and means nothing to the model.
     return [{k: d[k] for k in ("description", "category", "amount", "date")} for d in docs]
