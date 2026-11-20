@@ -67,9 +67,10 @@ def test_no_tool_writes_and_exactly_one_proposes():
 
 
 def test_run_tool_injects_the_actor_and_ignores_a_model_supplied_one(monkeypatch):
+    monkeypatch.setenv("WRITES_ENABLED", "true")
     seen = {}
     monkeypatch.setitem(advisor_tools.IMPLEMENTATIONS, "propose_expense", lambda **kw: seen.update(kw) or {})
-    advisor_tools.run_tool("propose_expense", json.dumps({"actor": "mallory", "amount": 1}), actor="alice")
+    advisor_tools.run_tool("propose_expense", json.dumps({"actor": "mallory", "amount": 1}), actor="alice", role="editor")
     assert seen["actor"] == "alice"
 
 def test_spotlight_modes(monkeypatch):

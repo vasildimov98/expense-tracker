@@ -103,7 +103,8 @@ def _chat_rounds(text: str, previous_response_id: str | None, audit_ctx: dict):
             return response
         outputs = []
         for c in calls:
-            result_text = run_tool(c.name, c.arguments, actor=audit_ctx.get("actor", "local-user"))
+            result_text = run_tool(c.name, c.arguments, actor=audit_ctx.get("actor", "local-user"),
+                               role=audit_ctx.get("role", "viewer"))
             # D81: keep the name, a HASH of the arguments (the model echoes the user's words into
             # them) and the result SIZE, never the arguments or the result text
             audit_ctx["tool_calls"].append(
@@ -114,14 +115,14 @@ def _chat_rounds(text: str, previous_response_id: str | None, audit_ctx: dict):
 
 
 def chat_safe(text: str, previous_response_id: str | None = None,
-              actor: str = "local-user") -> tuple[SafeResult, str | None]:
+              actor: str = "local-user", role: str = "viewer") -> tuple[SafeResult, str | None]:
     """chat() that treats content-filter outcomes as results (D73).
 
     Returns (result, id to pass into the next turn). A blocked turn produced no response,
     so the id stays the previous one: the conversation continues as if the turn never happened.
     """
     produced = {}
-    audit_ctx: dict = {"actor": actor}     # run_tool needs the identity too, not only the audit record
+    audit_ctx: dict = {"actor": actor, "role": role}   # run_tool needs identity and role too, not only the audit record
     outcome = "error"                      # stays "error" if interpret() raises
 
     def call():
@@ -138,6 +139,7 @@ def chat_safe(text: str, previous_response_id: str | None = None,
         finally:                           # runs on success AND on error: failures are what audits are for
             audit.write(
                 "agent_turn", actor,
+                role=role,
                 outcome=outcome,
                 model=audit_ctx.get("model"),
                 # The response carries only "gpt-4o". The pinned version is configuration (D55),

@@ -29,6 +29,11 @@ def write(event: str, actor: str, **fields) -> str:
     record = {
         "id": record_id, "ts": time.time(), "event": event, "actor": actor, **fields,
     }
+    # Any event written while a turn's span is active (tool denials, proposals) joins that trace too.
+    # Events from outside a span (the review CLI) simply have no trace_id. An explicit one wins.
+    trace_id = current_trace_id()
+    if trace_id and "trace_id" not in record:
+        record["trace_id"] = trace_id
     with AUDIT_PATH.open("a") as f:           # append only
         f.write(json.dumps(record, sort_keys=True) + "\n")
     return record_id

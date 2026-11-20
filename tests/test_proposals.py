@@ -164,18 +164,20 @@ def test_state_survives_a_fresh_process(shared_file):
     assert proposals._proposals == {} and proposals.list_pending() == []   # approved is no longer pending
 
 
-def test_propose_expense_tool_returns_pending_and_writes_nothing(shared_file):
+def test_propose_expense_tool_returns_pending_and_writes_nothing(shared_file, monkeypatch):
+    monkeypatch.setenv("WRITES_ENABLED", "true")
     from app.ai import advisor_tools
     out = json.loads(advisor_tools.run_tool(
-        "propose_expense", json.dumps({"amount": 4.2, "category": "Food", "description": "coffee"}), actor="alice"))
+        "propose_expense", json.dumps({"amount": 4.2, "category": "Food", "description": "coffee"}), actor="alice", role="editor"))
     assert out["status"] == "pending_approval"
     assert proposals.list_pending()[0].actor == "alice"
 
 
-def test_propose_expense_tool_returns_a_constraint_error_as_data(shared_file):
+def test_propose_expense_tool_returns_a_constraint_error_as_data(shared_file, monkeypatch):
+    monkeypatch.setenv("WRITES_ENABLED", "true")
     from app.ai import advisor_tools
     out = json.loads(advisor_tools.run_tool(
-        "propose_expense", json.dumps({"amount": 9000, "category": "Food", "description": "x"})))
+        "propose_expense", json.dumps({"amount": 9000, "category": "Food", "description": "x"}), role="editor"))
     assert "ProposalRejected" in out["error"] and "limit" in out["error"]
 
 

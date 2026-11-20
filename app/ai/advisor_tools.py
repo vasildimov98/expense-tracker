@@ -5,7 +5,7 @@ from contextvars import ContextVar
 
 from azure.ai.projects.models import FunctionTool
 
-from app.ai import proposals
+from app.ai import audit, proposals
 from app.ai.retrieval import retrieve
 from app.models import Category
 from app.services.expense_service import ExpenseService
@@ -122,7 +122,33 @@ def spotlight(text: str) -> str:
 UNTRUSTED_TOOLS = {"search_expenses"}
 
 
-def run_tool(name: str, arguments: str, actor: str = "local-user") -> str:
+# D85: the allowlist per role. An unknown role gets an empty set: deny by default.
+ROLE_TOOLS = {
+    "viewer": {"get_spending_summary", "search_expenses"},
+    "editor": {"get_spending_summary", "search_expenses", "propose_expense"},
+}
+WRITE_TOOLS = {"propose_expense"}     # tools the kill switch (D86) can turn off
+
+
+def _writes_enabled() -> bool:
+    # Read per call (a switch you must restart to flip is not a kill switch). Fail closed:
+    # unset, empty or any value other than exactly "true" means OFF.
+    return os.environ.get("WRITES_ENABLED", "false") == "true"
+
+
+def _deny(name: str, actor: str, role: str, reason: str) -> str:
+    # The tool name comes from the model: cap its length before it goes into the audit log.
+    audit.write("tool_denied", actor, tool=name[:64], role=role, reason=reason)
+    return json.dumps({"error": f"tool '{name[:64]}' is not available"})   # no hint about WHY
+
+
+def run_tool(name: str, arguments: str, actor: str = "local-user", role: str = "viewer") -> str:
+    # THE security boundary (D85): checked here, where the tool runs, because the model can emit a
+    # call to ANY tool name whether or not it was shown in the tool list.
+    if name not in ROLE_TOOLS.get(role, set()):
+        return _deny(name, actor, role, "role")
+    if name in WRITE_TOOLS and not _writes_enabled():
+        return _deny(name, actor, role, "kill_switch")
     # Errors go back to the model as data so it can recover or explain,
     # instead of crashing the conversation.
     try:

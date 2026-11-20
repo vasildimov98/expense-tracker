@@ -28,3 +28,8 @@ def _no_real_proposals_file(monkeypatch):
     # foundry_client loads the real .env on import; tests must never write the real proposals.json.
     monkeypatch.delenv("PROPOSALS_PATH", raising=False)
 
+
+@pytest.fixture(autouse=True)
+def _writes_off_by_default(monkeypatch):
+    # The real .env may enable writes; tests must opt in explicitly (fail closed).
+    monkeypatch.delenv("WRITES_ENABLED", raising=False)
