@@ -21,3 +21,10 @@ def _isolated_audit(tmp_path, monkeypatch):
     path = tmp_path / "audit.jsonl"
     monkeypatch.setattr(audit, "AUDIT_PATH", path)
     return path
+
+
+@pytest.fixture(autouse=True)
+def _no_real_proposals_file(monkeypatch):
+    # foundry_client loads the real .env on import; tests must never write the real proposals.json.
+    monkeypatch.delenv("PROPOSALS_PATH", raising=False)
+

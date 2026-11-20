@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A study project with two halves: a layered Python CLI expense tracker (`app/models`, `app/storage`, `app/services`, `app/cli`) used to learn Python from C#, and an "Expense Advisor" built on Microsoft Foundry and Azure AI Search (`app/ai/`, `infra/`) used to prepare for the AI-103 exam. The user is learning, so review and guide their code rather than writing it for them (see memory for hint and workflow preferences). `study/` holds exam notes, `plans/` holds step and lab plans.
+A study project with two halves: a layered Python CLI expense tracker (`app/models`, `app/storage`, `app/services`, `app/cli`) used to learn Python from C#, and an "Expense Advisor" built on Microsoft Foundry and Azure AI Search (`app/ai/`, `infra/`) used to prepare for the AI-103 exam. The user is learning. Since 2026-11-18 (Lab 8) Claude WRITES the code in learning sessions; the user cares about shapes, purposes and the alternative approaches and tools, not syntax (see "Learning sessions" and memory). `study/` holds exam notes, `plans/` holds step and lab plans.
 
 ## Commands
 
@@ -33,7 +33,7 @@ There is no linter configured. Lab scripts run as modules from the repo root, e.
 **AI layer (`app/ai/`)**: `foundry_client.py` is the single place that builds clients (project client, OpenAI client, a separate embeddings client because the project-scoped endpoint does not serve `/embeddings`). Everything else goes through it:
 - `model_router.py` maps a task (categorize, advise) to a deployment, with optional comma-separated fallbacks from `FOUNDRY_FALLBACK_*`; `resilience.py` does retry-with-backoff on 429 then fails over to the fallback deployment.
 - `retrieval.py` / `search_client.py` do vector search over Azure AI Search (index built by `labs/lab03_build_index.py`).
-- `advisor_agent.py` defines the Foundry agent; its tools (`advisor_tools.py`) are executed locally in a bounded loop (`MAX_TOOL_ROUNDS`). The agent is read-only by design.
+- `advisor_agent.py` defines the Foundry agent; its tools (`advisor_tools.py`) are executed locally in a bounded loop (`MAX_TOOL_ROUNDS`). The agent cannot write: its only write-shaped tool, `propose_expense`, creates a pending proposal (`proposals.py`) that a human approves in `labs/lab08_review.py` (Lab 8).
 - `usage.py` / `telemetry.py` write token usage to `usage.jsonl` (git-ignored) and OpenTelemetry to Application Insights.
 - `labs/` are runnable lab scripts, not library code; `lab02_eval_set.json` and `lab03_seed_expenses.json` are their fixtures.
 
@@ -50,3 +50,5 @@ Every time the user starts a learning session (a lab, a study module, a tracker 
 1. **Theory recap**: a brief, clear overview of the core concepts the session practises.
 2. **Step-by-step walkthrough, one task at a time**: Task 1 only first. Explain what we do and why, highlight key concepts, shapes and patterns to remember, and pause after each step so the user can confirm before moving on.
 3. **Wrap-up quiz**: after all tasks, a short interactive exam-style quiz.
+
+**Code in learning sessions (updated 2026-11-18):** Claude writes the code. With each piece, flag (a) the *shape* worth remembering (the pattern and its purpose), (b) the *alternative approaches and tools* for the same job and when each fits, and (c) only the syntax that differs from C#. Syntax details are not the point.

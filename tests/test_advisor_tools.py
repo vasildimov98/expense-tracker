@@ -59,10 +59,18 @@ def test_unknown_tool_returns_error_json():
     assert "error" in out
 
 
-def test_agent_has_no_write_tools():
-    # D37 as a regression test: the agent may only read.
+def test_no_tool_writes_and_exactly_one_proposes():
+    # D37 became D82: no tool writes; exactly one proposes; approve/execute are never tools.
     names = [tool.name for tool in advisor_tools.TOOLS]
-    assert not [n for n in names if n.startswith(("add", "delete", "update", "remove"))]
+    assert not [n for n in names if n.startswith(("add", "delete", "update", "remove", "approve", "execute"))]
+    assert [n for n in names if n.startswith("propose")] == ["propose_expense"]
+
+
+def test_run_tool_injects_the_actor_and_ignores_a_model_supplied_one(monkeypatch):
+    seen = {}
+    monkeypatch.setitem(advisor_tools.IMPLEMENTATIONS, "propose_expense", lambda **kw: seen.update(kw) or {})
+    advisor_tools.run_tool("propose_expense", json.dumps({"actor": "mallory", "amount": 1}), actor="alice")
+    assert seen["actor"] == "alice"
 
 def test_spotlight_modes(monkeypatch):
     monkeypatch.delenv("SPOTLIGHT", raising=False)

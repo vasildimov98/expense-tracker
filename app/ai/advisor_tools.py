@@ -5,6 +5,7 @@ from contextvars import ContextVar
 
 from azure.ai.projects.models import FunctionTool
 
+from app.ai import proposals
 from app.ai.retrieval import retrieve
 from app.models import Category
 from app.services.expense_service import ExpenseService
@@ -42,10 +43,21 @@ def search_expenses(query: str, category: str | None = None) -> list[dict]:
     return [{k: d[k] for k in ("description", "category", "amount", "date")} for d in docs]
 
 
+def propose_expense(amount: float, category: str, description: str, *, actor: str) -> dict:
+    # PROPOSES only (D82): nothing is written. `actor` is keyword-only and injected by run_tool,
+    # so the model can never choose who it is acting as.
+    p = proposals.propose(actor, {"amount": amount, "category": category, "description": description})
+    return {"status": "pending_approval", "proposal_id": p.id, "message": "A human must approve this."}
+
+
 IMPLEMENTATIONS = {
     "get_spending_summary": get_spending_summary,
     "search_expenses": search_expenses,
+    "propose_expense": propose_expense,
 }
+
+# Tools that need the caller's identity. It comes from trusted code, never from model arguments.
+ACTOR_TOOLS = {"propose_expense"}
 
 TOOLS = [
     FunctionTool(
@@ -72,6 +84,22 @@ TOOLS = [
         },
         strict=True,
     ),
+    FunctionTool(
+        name="propose_expense",
+        description="Ask to ADD one expense. This does not add it: it creates a request that a human "
+                    "must approve. Never tell the user the expense was added.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "amount": {"type": "number", "description": "Positive amount"},
+                "category": {"type": "string", "enum": [c.value for c in Category]},
+                "description": {"type": "string", "description": "Short description"},
+            },
+            "required": ["amount", "category", "description"],
+            "additionalProperties": False,
+        },
+        strict=True,
+    ),
 ]
 
 
@@ -94,11 +122,14 @@ def spotlight(text: str) -> str:
 UNTRUSTED_TOOLS = {"search_expenses"}
 
 
-def run_tool(name: str, arguments: str) -> str:
+def run_tool(name: str, arguments: str, actor: str = "local-user") -> str:
     # Errors go back to the model as data so it can recover or explain,
     # instead of crashing the conversation.
     try:
-        result = IMPLEMENTATIONS[name](**json.loads(arguments))
+        kwargs = json.loads(arguments)
+        if name in ACTOR_TOOLS:
+            kwargs["actor"] = actor          # overwrite: a model-supplied "actor" is ignored
+        result = IMPLEMENTATIONS[name](**kwargs)
     except Exception as err:
         result = {"error": f"{type(err).__name__}: {err}"}
     output = json.dumps(result)

@@ -231,3 +231,6 @@ usage.jsonl
 audit.jsonl
 
 .vscode/settings.json
+# Lab 8 pending proposals (contain expense descriptions)
+proposals.json
+proposals.json.tmp
